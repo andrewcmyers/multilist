@@ -1,0 +1,47 @@
+.clear, .paste {
+    -fx-background-color: linear-gradient(#f0ff35, #a9ff00),
+        radial-gradient(center 50% -40%,
+                        radius 200%,
+                        #b8ee36 45%,
+                        #80c800 50%);
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0.0, 0, 1 );
+    -fx-text-fill: #395306;
+}
+
+.selected {
+    -fx-background-color: #dff;
+}
+
+.global_menu {
+    -fx-color: #08f;
+}
+.filter_menu {
+	-fx-color: #f80;
+}
+
+.checkbox {
+   -fx-pref-width: 180;
+}
+
+.copied {
+	-fx-border-style: dashed;
+	-fx-border-color: green;
+	-fx-background-color: #efe;
+}
+
+.warning {
+	-fx-background-color: #ffc;
+	-fx-border-color: black;
+	-fx-border-style: solid;
+	-fx-border-width: 2px;
+	-fx-padding: 5px;
+}
+
+.notes {
+    -fx-background-color: lightyellow;
+    -fx-border-color: gray;
+    -fx-border-style: solid;
+    -fx-border-width: 1px;
+}	
