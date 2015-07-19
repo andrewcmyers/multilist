@@ -33,6 +33,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import multilist.Saver;
 import multilist.Position.Warning;
 
 /** GUI state associated with the current view. */
@@ -41,15 +42,18 @@ public class FxView {
 	GridPane grid;
 	Position pos;
 	StringProperty edit_text;
-	int edit_row;
+	int edit_row; // which row of the grid is being edited.
 	HashMap<Item, Pane> itemPanes;
 	Set<Item> selected = new HashSet<>();
 	Button select_menu;
 	Pane copy_buffer;
 	private Stage stage;
+	Saver saver;
 		
-	FxView(Model m, Stage s) {
+	FxView(Model m, Stage s, Saver saver) {
+		this.saver = saver;
 		box = new VBox();
+		box.getStyleClass().add("toplevel");
 		pos = new Position(m);
 		itemPanes = new HashMap<>();
 		stage = s;
@@ -87,46 +91,65 @@ public class FxView {
 		setup_item_rows();
 		c.add(grid);
 		if (!pos.current().isRoot()) {
-			if (!pos.current().fulfilled) {
-				HBox h = new HBox();
-				add(h, new Text("Due:"));
-				final TextField t = new TextField(pos.dateString(pos.current().dueDate()));
-				add (h,t);
-				c.add(h);
-				
-				t.setOnAction(new EventHandler<ActionEvent> (){
-
-					@Override
-					public void handle(ActionEvent arg0) {
-						try {
-							Date d = Position.dateFormat.parse(t.getText());
-							pos.current().setDate(d);
-						} catch (ParseException e) {
-							warn("could not parse date " + e.getMessage());
-						}
-						
-					}
-					
-				});
-//				c.add(new TextField(pos.dateString(pos.current().dueDate())));
-				
-			}
-			final TextArea t = new TextArea(pos.current().note());
-			t.getStyleClass().add("notes");
-			EventHandler<Event> updateNotes = new EventHandler<Event>() {
-				@Override
-				public void handle(Event e) {
-					pos.current().setNote(t.getText());
-				}
-			};
-			t.setOnKeyTyped(updateNotes);
-			t.setOnMouseExited(updateNotes);
-			c.add(t);
+			if (!pos.current().fulfilled)
+				c.add(setup_due_date());
+			c.add(setup_notes());
 		}
 		HBox global_menus = new HBox();
-		add(global_menus, setup_selection_menu(), setup_filtering_menu());
+		add(global_menus, setup_selection_menu(), setup_filtering_menu(), save_button());
 		c.add(global_menus);
 		setup_copy_buffer(c);
+	}
+	
+	private Node save_button() {
+		Button b = new Button("save");
+		b.setId("save");
+		b.setOnAction(new EventHandler<ActionEvent>(){
+			@Override
+			public void handle(ActionEvent arg0) {
+				try {
+					finishEditing();
+					saver.save();
+					warn("Saved.");
+				} catch (SaveFailed se) {
+					warn(se.getMessage());
+				}
+			}	
+		});
+		return b;
+	}
+	private Node setup_due_date() {
+		HBox h = new HBox();
+		add(h, new Text("Due:"));
+		final TextField t = new TextField(pos.dateString(pos.current().dueDate()));
+		add (h,t);
+		
+		t.setOnAction(new EventHandler<ActionEvent> (){
+			@Override
+			public void handle(ActionEvent arg0) {
+				try {
+					Date d = Position.dateFormat.parse(t.getText());
+					pos.current().setDate(d);
+				} catch (ParseException e) {
+					warn("could not parse date " + e.getMessage());
+				}
+			}
+		});		
+		return h;
+	}
+	
+	private Node setup_notes() {
+		final TextArea t = new TextArea(pos.current().note());
+		t.getStyleClass().add("notes");
+		EventHandler<Event> updateNotes = new EventHandler<Event>() {
+			@Override
+			public void handle(Event e) {
+				pos.current().setNote(t.getText());
+			}
+		};
+		t.setOnKeyTyped(updateNotes);
+		t.setOnMouseExited(updateNotes);
+		return t;
 	}
 	
 	private Node setup_top_line() {
@@ -177,19 +200,21 @@ public class FxView {
 		grid.add(b, 2, i);
 	}
 	private Node setup_selection_menu() {
-		final ContextMenu global_menu = new ContextMenu();
+		final ContextMenu selection_menu = new ContextMenu();
 		MenuItem remove = new MenuItem("remove selected");
 		MenuItem copy = new MenuItem("copy selected");
+		MenuItem check = new MenuItem("check selected");
+		MenuItem uncheck = new MenuItem("uncheck selected");
 		MenuItem clear = new MenuItem("clear selection");
 		MenuItem select_all = new MenuItem("select all");
-		global_menu.getItems().addAll(remove, copy, clear, select_all);
+		selection_menu.getItems().addAll(select_all, check, uncheck, copy, remove, clear);
 		select_menu = new Button("☰");
 
 		select_menu.getStyleClass().add("global_menu");
 
 		select_menu.setOnMousePressed(new EventHandler<MouseEvent>(){
 			@Override public void handle(MouseEvent me) {
-				global_menu.show(select_menu, me.getScreenX(), me.getScreenY());
+				selection_menu.show(select_menu, me.getScreenX(), me.getScreenY());
 			}
 		});
 		remove.setOnAction(new EventHandler<ActionEvent>() {
@@ -230,9 +255,26 @@ public class FxView {
 				setup();
 			}			
 		});
+		check.setOnAction(new EventHandler<ActionEvent> () {
+			@Override public void handle(ActionEvent a) {
+				finishEditing();
+				for (Item k: selected)
+					k.setFulfilled(false);
+				setup();
+			}
+		});
+		uncheck.setOnAction(new EventHandler<ActionEvent> () {
+			@Override public void handle(ActionEvent a) {
+				finishEditing();
+				for (Item k: selected)
+					k.setFulfilled(true);
+				setup();
+			}
+		});
 
 		return select_menu;
 	}
+	
 	private Node setup_filtering_menu() {
 		final ContextMenu filtering_menu = new ContextMenu();
 		MenuItem completed;
@@ -242,7 +284,7 @@ public class FxView {
 			completed = new MenuItem("show completed");
 		}
 		MenuItem sort_date = new MenuItem("sort by date");
-		MenuItem sort_name = new MenuItem("alphabetize");
+		MenuItem sort_name = new MenuItem("sort by name");
 		filtering_menu.getItems().addAll(completed, sort_name, sort_date);
 		final Button b = new Button("☰");
 
@@ -311,7 +353,7 @@ public class FxView {
 			tf.requestFocus();
 		} else {	
 			add(checkbox_area, cb = new CheckBox(k.name()));
-			if (selected.contains(k)) cb.getStyleClass().add("selected");
+			if (selected.contains(k)) row.getStyleClass().add("selected");
 		}
 		Region spacer = new Region();
 		add(checkbox_area, spacer);
@@ -364,10 +406,15 @@ public class FxView {
 			@Override public void handle(MouseEvent me) {
 				if (me.isMetaDown()) {
 					if (selected.contains(k)) {
-						cb.getStyleClass().remove("selected");
+						row.getStyleClass().remove("selected");
+						row.getStyleClass().add("unselected");
+
+						row.setStyle(" -fx-background-color: transparent"); // should not be necessary
 						selected.remove(k);
 					} else {
-						cb.getStyleClass().add("selected");
+						row.getStyleClass().remove("unselected");
+						row.getStyleClass().add("selected");
+						row.setStyle("");
 						selected.add(k);
 					}
 				}

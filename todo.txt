@@ -1,11 +1,4 @@
-due dates
-display of details for current item
-hide completed items
-sorting
 back button? (for recovering from copy)
-checked should mean *un*fulfilled
-integer indices are causing trouble -- need to make sure there is no assumption
-    of sequential indices
 'select all' doesn't select
 unselect doesn't unselect
 need 'check all'

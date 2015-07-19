@@ -45,3 +45,12 @@
     -fx-border-style: solid;
     -fx-border-width: 1px;
 }	
+
+.toplevel {
+	-fx-padding: 4px;
+}
+
+#save {
+	-fx-color: yellow;
+	-fx-padding-left: 4px;
+}

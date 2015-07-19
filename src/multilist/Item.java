@@ -1,5 +1,6 @@
 package multilist;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -10,7 +11,7 @@ import java.util.Set;
 
 import multilist.Position.Warning;
 
-public class Item implements Iterable<Item> {
+public class Item implements Iterable<Item>, Serializable {
 	private String name;
 	private Set<Item> parents = newItems();
 	private Set<Item> kids = newItems();
@@ -41,6 +42,7 @@ public class Item implements Iterable<Item> {
 		for (Item k : kid_ordering) {
 			assert (kids.contains(k));
 		}
+		assert isRoot() || due_date != null;
 		
 		return true;
 	}
@@ -135,6 +137,7 @@ public class Item implements Iterable<Item> {
 	}
 
 	public void setFulfilled(boolean f) {
+		if (isRoot()) return;
 		if (fulfilled == f) return;
 		if (!f && due_date.before(new Date())) {
 			due_date = new Date();
