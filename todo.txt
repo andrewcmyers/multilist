@@ -1,6 +1,3 @@
 back button? (for recovering from copy)
-'select all' doesn't select
-unselect doesn't unselect
-need 'check all'
 
 remove should copy?
