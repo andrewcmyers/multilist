@@ -43,7 +43,6 @@ public class Item implements Iterable<Item>, Serializable {
 		for (Item k : kid_ordering) {
 			assert (kids.contains(k));
 		}
-		assert isRoot() || due_date != null;
 		
 		return true;
 	}
@@ -141,7 +140,7 @@ public class Item implements Iterable<Item>, Serializable {
 	public void setFulfilled(boolean f) {
 		if (isRoot()) return;
 		if (fulfilled == f) return;
-		if (!f && due_date.before(new Date())) {
+		if (!f && due_date != null && due_date.before(new Date())) {
 			due_date = new Date();
 			boolean bumped = false;
 			for (Item k : kids) {

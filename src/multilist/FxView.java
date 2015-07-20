@@ -165,17 +165,21 @@ public class FxView {
 			DateAnalysis r = pos.analyzeDates();
 			if (r.first_k != null) {
 				HBox h2 = new HBox(), h3 = new HBox();
-				if (r.first_k != r.last_k)
-					add(h2, new Text("First due: " + r.first_k.name() + ", "));
+
+				add(h2, new Text("First due: " + r.first_k.name() + ", "));
 				Label ds1 = new Label(pos.dateString(r.first));
 				add(h2, ds1);
 				if (r.first.before(now))
 					ds1.getStyleClass().add("overdue");
-				add(h3, new Text("Last due: "+ r.last_k.name() + ", "));
-				Label ds = new Label(pos.dateString(r.last));
-				add(h3, ds);
-				if (r.last.after(pos.current().dueDate())) {
-					ds.getStyleClass().add("overdue");
+				if (pos.current().dueDate() != null && r.first.after(pos.current().dueDate()))
+					ds1.getStyleClass().add("too_late");
+
+				if (pos.current().dueDate() != null && r.first_k != r.last_k) {
+					add(h3, new Text("Last due: "+ r.last_k.name() + ", "));
+					Label ds = new Label(pos.dateString(r.last));
+					add(h3, ds);
+					if (r.last.after(pos.current().dueDate()))
+						ds.getStyleClass().add("too_late");
 				}
 				add(v, h2, h3);
 			}	

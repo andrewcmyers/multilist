@@ -57,5 +57,9 @@
 
 .overdue {
 	-fx-text-fill: red;
+	-fx-font-weight: bold;
+}
+.too_late {
+	-fx-text-fill: orange;
 	-fx-text-style: bold;
 }
