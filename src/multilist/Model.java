@@ -4,10 +4,10 @@ import java.io.Serializable;
 
 /** A Model represents the persistent state associated with a given user's view of the system. */
 public class Model implements Serializable {
-//	private static final long serialVersionUID = 660521719328234318L;
+	private static final long serialVersionUID = 6674947740041255296L;
 	public final Item root = Item.root();
 	
-	static void exampleModel() {
+	void exampleModel() {
 		Item root = Item.root();
 		Item grocery = new Item("grocery", root);
 		Item hardware = new Item("hardware", root);

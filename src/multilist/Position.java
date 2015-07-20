@@ -6,12 +6,13 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Observable;
 import java.util.Set;
 
 /** A Position represents a current view of the system. It is independent of the GUI framework but
  *  contains non-persistent state associated with the current view.
  */
-public class Position {
+public class Position extends Observable {
 	private Model model;
 	private ArrayList<Item> path;
 
@@ -66,9 +67,10 @@ public class Position {
 	Iterable<Item> items() {
 		return current.orderedKids();
 	}
-	public Item addKid() {
+	public Item createKid() {
 		Item result = new Item("", current);
 		current.addKid(result);
+		notifyChanged();
 		return result;
 	}
 
@@ -93,10 +95,10 @@ public class Position {
 			if (reachable(k, current)) throw new Warning(k.name() + " cannot be under itself.");
 		}
 		for (Item k : copy_buffer)
-			current.addKid(k);
-		
+			addKid(k);
 		return;
 	}
+
 	private boolean reachable(Item k1, Item k2) {
 		Set<Item> seen = new HashSet<>();
 		return reachable1(k1, k2, seen);
@@ -122,7 +124,7 @@ public class Position {
 	public void finishEditing(String value) {
 		assert editing;
 		Item it = edit_item;
-		it.setName(value);
+		setName(it, value);
 		editing = false;
 	}
 
@@ -157,5 +159,39 @@ public class Position {
 //		return b.toString();
 		return Position.dateFormat.format(dueDate);
 	}
-
+	
+	void notifyChanged() {
+		setChanged();
+		notifyObservers();
+	}
+	
+	// Item mutators that notify the model.
+	public void setNote(String text) {
+		current.setNote(text);
+		notifyChanged();
+	}
+	public void setFulfilled(Item it, boolean b) {
+		it.setFulfilled(b);
+		notifyChanged();		
+	}
+	private void addKid(Item k) {
+		current.addKid(k);
+		notifyChanged();		
+	}
+	public void removeKid(Item k) throws Warning {
+		current.removeKid(k);
+		notifyChanged();		
+	}
+	public void sortKids(SortOrder dueDate) {
+		current.sortKids(dueDate);
+		notifyChanged();		
+	}
+	public void setName(Item k, String text) {
+		k.setName(text);
+		notifyChanged();		
+	}
+	public void setDate(Date d) {
+		current.setDate(d);
+		notifyChanged();		
+	}
 }

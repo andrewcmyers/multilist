@@ -12,6 +12,7 @@ import java.util.Set;
 import multilist.Position.Warning;
 
 public class Item implements Iterable<Item>, Serializable {
+	private static final long serialVersionUID = -9103146750499516106L;
 	private String name;
 	private Set<Item> parents = newItems();
 	private Set<Item> kids = newItems();
@@ -20,8 +21,8 @@ public class Item implements Iterable<Item>, Serializable {
 	*/
 	private ArrayList<Item> kid_ordering = new ArrayList<>(); 
 	private Date due_date;
-	boolean fulfilled = true;
 	int quantity = 1;
+	boolean fulfilled = true;
 	private String note = "";
 	/** whether to show fulfilled kids. Should ideally be user-specific. */
 	public boolean showFulfilled = true;
@@ -121,6 +122,7 @@ public class Item implements Iterable<Item>, Serializable {
 		assert invariant();
 		return result;
 	}
+
 	private int numParents() {
 		return parents.size();
 	}

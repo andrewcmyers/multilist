@@ -1,5 +1,6 @@
 package multilist;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -40,7 +41,7 @@ public class Main extends Application {
 		
 		if (filename == null) {
 			model = new Model();
-			Model.exampleModel();
+			model.exampleModel();
 		} else {
 			try {
 				ObjectInputStream input = new ObjectInputStream(new FileInputStream(filename));
@@ -70,7 +71,6 @@ public class Main extends Application {
 		stage.show();
 	}
 
-	
 	private class Save implements Saver {
 		public boolean fileChosen() {
 			return true;
@@ -80,7 +80,8 @@ public class Main extends Application {
 			if (filename == null)
 				filename = "dummy.multilist";
 			try {
-				outs = new FileOutputStream(filename);
+				File newf = new File(filename + ".tmp");
+				outs = new FileOutputStream(newf);
 		
 				ObjectOutputStream out = new ObjectOutputStream(outs);
 				
@@ -88,11 +89,14 @@ public class Main extends Application {
 				
 				out.flush();
 				out.close();
+				File old = new File(filename);
+				newf.renameTo(old);
 			} catch (FileNotFoundException e) {
 				throw new SaveFailed("Unable to create " + filename + " : "
 						+ e.getMessage());
 			} catch (IOException e) {
-				throw new SaveFailed("I/O exception accessing " + filename);
+				throw new SaveFailed("I/O exception accessing "
+						+ filename + ": " +e.getMessage());
 			}
 		}
 	}

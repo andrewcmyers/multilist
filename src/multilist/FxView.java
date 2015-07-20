@@ -4,9 +4,12 @@ import java.text.ParseException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Set;
 
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
@@ -33,7 +36,6 @@ import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import multilist.Saver;
 import multilist.Position.Warning;
 
 /** GUI state associated with the current view. */
@@ -49,17 +51,26 @@ public class FxView {
 	Pane copy_buffer;
 	private Stage stage;
 	Saver saver;
+	boolean unsaved_update;
 		
 	FxView(Model m, Stage s, Saver saver) {
 		this.saver = saver;
 		box = new VBox();
 		box.getStyleClass().add("toplevel");
 		pos = new Position(m);
+		pos.addObserver(new Observer() {
+			@Override
+			public void update(Observable o, Object arg) {
+				unsaved_update = true;
+			}
+		});
 		itemPanes = new HashMap<>();
 		stage = s;
+		setup_periodic_save();
 		setup();
 		assert invariant();
 	}
+
 	boolean invariant() {
 		assert pos.invariant();
 		for (Item i : pos.items()) {
@@ -67,6 +78,26 @@ public class FxView {
 		}
 		assert itemPanes.size() == pos.current().numKids();
 		return true;
+	}
+	private void setup_periodic_save() {
+		final PauseTransition delay = new PauseTransition(Duration.seconds(10));
+		delay.setCycleCount(1);
+		delay.setOnFinished(new EventHandler<ActionEvent>(){
+			@Override
+			public void handle(ActionEvent a) {
+				try {
+					if (unsaved_update) {
+						saver.save();
+						warn("Autosaved.");
+					}
+					unsaved_update = false;
+					delay.playFromStart();
+				} catch (SaveFailed s) {
+					warn(s.getMessage());
+				}
+			}
+		});
+		delay.play();
 	}
 
 	String topline(Item k) {
@@ -96,28 +127,11 @@ public class FxView {
 			c.add(setup_notes());
 		}
 		HBox global_menus = new HBox();
-		add(global_menus, setup_selection_menu(), setup_filtering_menu(), save_button());
+		add(global_menus, setup_selection_menu(), setup_filtering_menu());
 		c.add(global_menus);
 		setup_copy_buffer(c);
 	}
 	
-	private Node save_button() {
-		Button b = new Button("save");
-		b.setId("save");
-		b.setOnAction(new EventHandler<ActionEvent>(){
-			@Override
-			public void handle(ActionEvent arg0) {
-				try {
-					finishEditing();
-					saver.save();
-					warn("Saved.");
-				} catch (SaveFailed se) {
-					warn(se.getMessage());
-				}
-			}	
-		});
-		return b;
-	}
 	private Node setup_due_date() {
 		HBox h = new HBox();
 		add(h, new Text("Due:"));
@@ -129,7 +143,7 @@ public class FxView {
 			public void handle(ActionEvent arg0) {
 				try {
 					Date d = Position.dateFormat.parse(t.getText());
-					pos.current().setDate(d);
+					pos.setDate(d);
 				} catch (ParseException e) {
 					warn("could not parse date " + e.getMessage());
 				}
@@ -144,7 +158,8 @@ public class FxView {
 		EventHandler<Event> updateNotes = new EventHandler<Event>() {
 			@Override
 			public void handle(Event e) {
-				pos.current().setNote(t.getText());
+				pos.setNote(t.getText());
+				
 			}
 		};
 		t.setOnKeyTyped(updateNotes);
@@ -189,8 +204,8 @@ public class FxView {
 			@Override
 			public void handle(ActionEvent a) {
 				finishEditing();
-				Item it = pos.addKid();
-				it.setFulfilled(false);
+				Item it = pos.createKid();
+				pos.setFulfilled(it, false);
 				itemPanes.put(it, new HBox());
 				pos.startEditing(it);
 				edit_row = current.numKids() - 1;
@@ -222,7 +237,7 @@ public class FxView {
 				try {
 					finishEditing();
 					for (Item k : selected)
-						pos.current().removeKid(k);
+						pos.removeKid(k);
 					setup();
 				} catch (Warning w) {
 					warn(w.getMessage());
@@ -259,7 +274,7 @@ public class FxView {
 			@Override public void handle(ActionEvent a) {
 				finishEditing();
 				for (Item k: selected)
-					k.setFulfilled(false);
+					pos.setFulfilled(k, false);
 				setup();
 			}
 		});
@@ -267,7 +282,7 @@ public class FxView {
 			@Override public void handle(ActionEvent a) {
 				finishEditing();
 				for (Item k: selected)
-					k.setFulfilled(true);
+					pos.setFulfilled(k, true);
 				setup();
 			}
 		});
@@ -305,14 +320,14 @@ public class FxView {
 		sort_date.setOnAction(new EventHandler<ActionEvent>() {
 			@Override public void handle(ActionEvent a) {
 				finishEditing();
-				pos.current().sortKids(SortOrder.DUE_DATE);
+				pos.sortKids(SortOrder.DUE_DATE);
 				setup();
 			}	
 		});
 		sort_name.setOnAction(new EventHandler<ActionEvent>() {
 			@Override public void handle(ActionEvent a) {
 				finishEditing();
-				pos.current().sortKids(SortOrder.ALPHABETIC);
+				pos.sortKids(SortOrder.ALPHABETIC);
 				setup();
 			}	
 		});
@@ -325,7 +340,6 @@ public class FxView {
 		assert row != null;
 		
 		boolean edited = pos.isEditing(k);
-		final Item current = pos.current();
 		Button down = null;
 
 		row.getChildren().clear();
@@ -343,7 +357,7 @@ public class FxView {
 			tf.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent e) {
-					k.setName(tf.getText());
+					pos.setName(k, tf.getText());
 					pos.editing = false;
 					setupRow(k, i);
 				}		
@@ -386,7 +400,7 @@ public class FxView {
 				// TODO should check for whether it's okay to remove, really.
 				finishEditing();
 				try {
-					current.removeKid(k);
+					pos.removeKid(k);
 					setup();
 				} catch (Warning w) {
 					warn(w.getMessage());
