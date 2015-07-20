@@ -54,3 +54,8 @@
 	-fx-color: yellow;
 	-fx-padding-left: 4px;
 }
+
+.overdue {
+	-fx-text-fill: red;
+	-fx-text-style: bold;
+}

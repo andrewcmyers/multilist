@@ -36,6 +36,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import multilist.Position.DateAnalysis;
 import multilist.Position.Warning;
 
 /** GUI state associated with the current view. */
@@ -121,11 +122,11 @@ public class FxView {
 		c.add(setup_top_line());
 		setup_item_rows();
 		c.add(grid);
-		if (!pos.current().isRoot()) {
-			if (!pos.current().fulfilled)
-				c.add(setup_due_date());
-			c.add(setup_notes());
-		}
+		if (!pos.current().fulfilled)
+			c.add(setup_due_date());
+
+		c.add(setup_notes());
+
 		HBox global_menus = new HBox();
 		add(global_menus, setup_selection_menu(), setup_filtering_menu());
 		c.add(global_menus);
@@ -133,23 +134,53 @@ public class FxView {
 	}
 	
 	private Node setup_due_date() {
+		VBox v = new VBox();
 		HBox h = new HBox();
+		add(v, h);
 		add(h, new Text("Due:"));
-		final TextField t = new TextField(pos.dateString(pos.current().dueDate()));
+		
+		final TextField t = new TextField(
+				(pos.current().dueDate() != null) ? 
+				pos.dateString(pos.current().dueDate()):
+					"none");
 		add (h,t);
+		
+		Date now = new Date();
 		
 		t.setOnAction(new EventHandler<ActionEvent> (){
 			@Override
 			public void handle(ActionEvent arg0) {
 				try {
-					Date d = Position.dateFormat.parse(t.getText());
-					pos.setDate(d);
+					if (t.getText().equals("none")) pos.setDate(null);
+					else {
+						Date d = Position.dateFormat.parse(t.getText());
+						pos.setDate(d);
+					}
 				} catch (ParseException e) {
 					warn("could not parse date " + e.getMessage());
 				}
 			}
-		});		
-		return h;
+		});
+		if (pos.current().numKids() > 0) {
+			DateAnalysis r = pos.analyzeDates();
+			if (r.first_k != null) {
+				HBox h2 = new HBox(), h3 = new HBox();
+				if (r.first_k != r.last_k)
+					add(h2, new Text("First due: " + r.first_k.name() + ", "));
+				Label ds1 = new Label(pos.dateString(r.first));
+				add(h2, ds1);
+				if (r.first.before(now))
+					ds1.getStyleClass().add("overdue");
+				add(h3, new Text("Last due: "+ r.last_k.name() + ", "));
+				Label ds = new Label(pos.dateString(r.last));
+				add(h3, ds);
+				if (r.last.after(pos.current().dueDate())) {
+					ds.getStyleClass().add("overdue");
+				}
+				add(v, h2, h3);
+			}	
+		}
+		return v;
 	}
 	
 	private Node setup_notes() {

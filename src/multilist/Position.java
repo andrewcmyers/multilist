@@ -165,6 +165,29 @@ public class Position extends Observable {
 		notifyObservers();
 	}
 	
+	static class DateAnalysis {
+		Item first_k, last_k;
+		Date first, last;
+	}
+
+	DateAnalysis analyzeDates() {
+		DateAnalysis r = new DateAnalysis();
+	
+		if (current.numKids() > 0) {
+			for (Item k : current) {
+				if (k.dueDate() != null && (r.first == null || k.dueDate().before(r.first))) {
+					r.first = k.dueDate();
+					r.first_k = k;
+				}
+				if (k.dueDate() != null && (r.last == null || k.dueDate().after(r.last))) {
+					r.last = k.dueDate();
+					r.last_k = k;
+				}
+			}
+		}
+		return r;
+	}
+
 	// Item mutators that notify the model.
 	public void setNote(String text) {
 		current.setNote(text);

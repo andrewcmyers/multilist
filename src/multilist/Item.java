@@ -20,7 +20,7 @@ public class Item implements Iterable<Item>, Serializable {
 	 * Should ideally be user-specific and factored out into a separate class.
 	*/
 	private ArrayList<Item> kid_ordering = new ArrayList<>(); 
-	private Date due_date;
+	private Date due_date; // may be null if no due date
 	int quantity = 1;
 	boolean fulfilled = true;
 	private String note = "";
