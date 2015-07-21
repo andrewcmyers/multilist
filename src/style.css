@@ -40,6 +40,9 @@
 }
 
 .notes {
+    -fx-pref-width: 300px;
+}
+.notes .content {
     -fx-background-color: lightyellow;
     -fx-border-color: gray;
     -fx-border-style: solid;

@@ -1,3 +1,6 @@
 back button? (for recovering from copy)
 
 remove should copy?
+
+allow saving to remote shared location (IMAP?)
+    - but this seems to require tracking logs and merging?

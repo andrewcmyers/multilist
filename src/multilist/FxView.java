@@ -13,9 +13,6 @@ import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -25,7 +22,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -83,19 +79,16 @@ public class FxView {
 	private void setup_periodic_save() {
 		final PauseTransition delay = new PauseTransition(Duration.seconds(10));
 		delay.setCycleCount(1);
-		delay.setOnFinished(new EventHandler<ActionEvent>(){
-			@Override
-			public void handle(ActionEvent a) {
-				try {
-					if (unsaved_update) {
-						saver.save();
-						warn("Autosaved.");
-					}
-					unsaved_update = false;
-					delay.playFromStart();
-				} catch (SaveFailed s) {
-					warn(s.getMessage());
+		delay.setOnFinished(a -> {
+			try {
+				if (unsaved_update) {
+					saver.save();
+					warn("Autosaved.");
 				}
+				unsaved_update = false;
+				delay.playFromStart();
+			} catch (SaveFailed s) {
+				warn(s.getMessage());
 			}
 		});
 		delay.play();
@@ -147,9 +140,7 @@ public class FxView {
 		
 		Date now = new Date();
 		
-		t.setOnAction(new EventHandler<ActionEvent> (){
-			@Override
-			public void handle(ActionEvent arg0) {
+		t.setOnAction(a -> {
 				try {
 					if (t.getText().equals("none")) pos.setDate(null);
 					else {
@@ -159,7 +150,6 @@ public class FxView {
 				} catch (ParseException e) {
 					warn("could not parse date " + e.getMessage());
 				}
-			}
 		});
 		if (pos.current().numKids() > 0) {
 			DateAnalysis r = pos.analyzeDates();
@@ -189,16 +179,10 @@ public class FxView {
 	
 	private Node setup_notes() {
 		final TextArea t = new TextArea(pos.current().note());
-		t.getStyleClass().add("notes");
-		EventHandler<Event> updateNotes = new EventHandler<Event>() {
-			@Override
-			public void handle(Event e) {
-				pos.setNote(t.getText());
-				
-			}
-		};
-		t.setOnKeyTyped(updateNotes);
-		t.setOnMouseExited(updateNotes);
+		t.getStyleClass().add("notes");	
+
+		t.setOnKeyTyped(e -> pos.setNote(t.getText()));
+		t.setOnMouseExited(e -> pos.setNote(t.getText()));
 		return t;
 	}
 	
@@ -208,13 +192,10 @@ public class FxView {
 		if (!current.isRoot()) {
 			Button up;
 			add(toprow, up = new Button("▲"), new Text(topline(current)));
-			up.setOnAction(new EventHandler<ActionEvent>() {
-				@Override
-				public void handle(ActionEvent a) {
-					finishEditing();
-					pos.moveUp();
-					setup();
-				}
+			up.setOnAction(a -> {
+				finishEditing();
+				pos.moveUp();
+				setup();
 			});
 		}
 		return toprow;
@@ -235,17 +216,14 @@ public class FxView {
 			i++;
 		}
 		Button b = new Button("+");
-		b.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent a) {
-				finishEditing();
-				Item it = pos.createKid();
-				pos.setFulfilled(it, false);
-				itemPanes.put(it, new HBox());
-				pos.startEditing(it);
-				edit_row = current.numKids() - 1;
-				setup();
-			}
+		b.setOnAction(a -> {
+			finishEditing();
+			Item it = pos.createKid();
+			pos.setFulfilled(it, false);
+			itemPanes.put(it, new HBox());
+			pos.startEditing(it);
+			edit_row = current.numKids() - 1;
+			setup();
 		});
 		grid.add(b, 2, i);
 	}
@@ -262,13 +240,10 @@ public class FxView {
 
 		select_menu.getStyleClass().add("global_menu");
 
-		select_menu.setOnMousePressed(new EventHandler<MouseEvent>(){
-			@Override public void handle(MouseEvent me) {
-				selection_menu.show(select_menu, me.getScreenX(), me.getScreenY());
-			}
-		});
-		remove.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
+		select_menu.setOnMousePressed(me ->
+				selection_menu.show(select_menu, me.getScreenX(), me.getScreenY()));
+		
+		remove.setOnAction(a -> {
 				try {
 					finishEditing();
 					for (Item k : selected)
@@ -277,49 +252,40 @@ public class FxView {
 				} catch (Warning w) {
 					warn(w.getMessage());
 				}
-			}});
-		clear.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
+			});
+		clear.setOnAction(a-> {
 				selected.clear();
 				pos.copying = false;
 				setup();				
-			}
+			});
+		select_all.setOnAction(a -> {
+			finishEditing();
+			int i = 0;
+			for (Item k : pos.items()) {
+				if (!itemPanes.containsKey(k)) continue;
+				selected.add(k);
+				setupRow(k, i++);
+			}				
 		});
-		select_all.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
-				finishEditing();
-				int i = 0;
-				for (Item k : pos.items()) {
-					if (!itemPanes.containsKey(k)) continue;
-					selected.add(k);
-					setupRow(k, i++);
-				}				
-			}	
-		});
-		copy.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
+		copy.setOnAction(a -> {
 				finishEditing();
 				for (Item k : selected) {
 					pos.extendCopy(k);
 				}
 				setup();
-			}			
 		});
-		check.setOnAction(new EventHandler<ActionEvent> () {
-			@Override public void handle(ActionEvent a) {
-				finishEditing();
-				for (Item k: selected)
-					pos.setFulfilled(k, false);
-				setup();
-			}
+		check.setOnAction(a -> {
+			finishEditing();
+			for (Item k: selected)
+				pos.setFulfilled(k, false);
+			setup();
+
 		});
-		uncheck.setOnAction(new EventHandler<ActionEvent> () {
-			@Override public void handle(ActionEvent a) {
-				finishEditing();
-				for (Item k: selected)
-					pos.setFulfilled(k, true);
-				setup();
-			}
+		uncheck.setOnAction(a -> {
+			finishEditing();
+			for (Item k: selected)
+				pos.setFulfilled(k, true);
+			setup();
 		});
 
 		return select_menu;
@@ -340,31 +306,22 @@ public class FxView {
 
 		b.getStyleClass().add("filter_menu");
 
-		b.setOnMousePressed(new EventHandler<MouseEvent>(){
-			@Override public void handle(MouseEvent me) {
-				filtering_menu.show(b, me.getScreenX(), me.getScreenY());
-			}
-		});
-		completed.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
+		b.setOnMousePressed(me ->
+			filtering_menu.show(b, me.getScreenX(), me.getScreenY()));
+		completed.setOnAction(a -> {
 				finishEditing();
 				pos.toggleShowCompleted();
 				setup();
-			}
-		});
-		sort_date.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
+			});
+		sort_date.setOnAction(a -> {
 				finishEditing();
 				pos.sortKids(SortOrder.DUE_DATE);
 				setup();
-			}	
 		});
-		sort_name.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
+		sort_name.setOnAction(a -> {
 				finishEditing();
 				pos.sortKids(SortOrder.ALPHABETIC);
 				setup();
-			}	
 		});
 		return b;
 	}
@@ -389,13 +346,10 @@ public class FxView {
 			final TextField tf = new TextField(k.name());
 			edit_text = tf.textProperty();
 			add(checkbox_area, cb = new CheckBox(), tf);
-			tf.setOnAction(new EventHandler<ActionEvent>() {
-				@Override
-				public void handle(ActionEvent e) {
+			tf.setOnAction(e -> {
 					pos.setName(k, tf.getText());
 					pos.editing = false;
 					setupRow(k, i);
-				}		
 			});
 			tf.selectAll();
 			tf.end();
@@ -413,7 +367,7 @@ public class FxView {
 		
 		HBox buttons = new HBox();
 		grid.add(buttons,  2,  i);
-		add(buttons, down = new Button("‣"));
+		add(buttons, down = new Button("▶"));
 		addHandlers(cb, down, k);
 		
 		final Button menu;
@@ -424,14 +378,9 @@ public class FxView {
 		cmenu.getItems().addAll(edit, copy, remove);
 		add(buttons, menu = new Button("☰"));
 
-		menu.setOnMousePressed(new EventHandler<MouseEvent>(){
-			@Override
-			public void handle(MouseEvent me) {
-				cmenu.show(cb, me.getScreenX(), me.getScreenY());
-			}
-		});
-		remove.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent e) {
+		menu.setOnMousePressed(me ->
+				cmenu.show(cb, me.getScreenX(), me.getScreenY()));
+		remove.setOnAction(e -> {
 				// TODO should check for whether it's okay to remove, really.
 				finishEditing();
 				try {
@@ -439,20 +388,14 @@ public class FxView {
 					setup();
 				} catch (Warning w) {
 					warn(w.getMessage());
-				}
-			}
-		});
-		edit.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent e) {
+				}});
+		edit.setOnAction(e -> {
 				if (pos.isEditing(k)) return; // already editing this name!
 				finishEditing();
 				pos.startEditing(k);
-
-				setupRow(k, i);
-			}
-		});
-		cb.setOnMouseClicked(new EventHandler<MouseEvent>() {
-			@Override public void handle(MouseEvent me) {
+				setupRow(k, i);}
+		);
+		cb.setOnMouseClicked(me -> {
 				if (me.isMetaDown()) {
 					if (selected.contains(k)) {
 						row.getStyleClass().remove("selected");
@@ -466,15 +409,12 @@ public class FxView {
 						row.setStyle("");
 						selected.add(k);
 					}
-				}
-			}
-		});
-		copy.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent a) {
+				}}
+		);
+		copy.setOnAction(a -> {
 				finishEditing();
 				pos.extendCopy(k);
 				setup();
-			}			
 		});
 	}
 	
@@ -506,11 +446,7 @@ public class FxView {
 	    Timeline t = new Timeline(1);
 	    t.getKeyFrames().add(new KeyFrame(new Duration(2.0)));
 	    
-	    t.setOnFinished(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent arg0) {
-				popup.hide();
-			}
-	    });
+	    t.setOnFinished(e -> popup.hide());
 	    t.play();
 	}
 	
@@ -535,27 +471,21 @@ public class FxView {
 		add(h, paste, clear);
 
 		r2.setPadding(new Insets(2));
-
 		r2.getStyleClass().add("copied");
 		
-		clear.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent a) {
+		clear.setOnAction(a -> {
 				pos.copying = false;
 				setup();
-			}
-		});
-		paste.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent arg0) {
+			});
+		
+		paste.setOnAction(ae -> {
 				try {
 					pos.doCopy();
 					setup();
 				} catch (Warning w) {
 					warn(w.getMessage());
 				}
-			}			
 		});
-		
 	}
 	
 	void finishEditing() {
@@ -568,17 +498,12 @@ public class FxView {
 
 	private void addHandlers(final CheckBox cb, Button down, final Item k) {
 		assert k != null;
-		cb.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent e) {
-				k.setFulfilled(!cb.isSelected());
-			}
-		});
+		cb.setOnAction(e -> k.setFulfilled(!cb.isSelected()));
 
-		if (down != null) down.setOnAction(new EventHandler<ActionEvent>() {
-			@Override public void handle(ActionEvent e) {
+		if (down != null) down.setOnAction(e -> {
 				finishEditing();
 				pos.moveDownTo(k);
 				setup();
-			}});
+			});
 	}
 }
