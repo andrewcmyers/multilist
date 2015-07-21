@@ -1,7 +1,5 @@
 package multilist;
 
-import java.text.ParseException;
-import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -197,7 +195,7 @@ public class FxView {
 		t.setOnMouseExited(e -> pos.setNote(t.getText()));
 		return t;
 	}
-	
+
 	private Node setup_top_line() {
 		final Item current = pos.current();
 		HBox toprow = new HBox();
@@ -212,7 +210,7 @@ public class FxView {
 		}
 		return toprow;
 	}
-	
+
 	/** Set 'grid' to refer to the pane containing the item checklist. */
 	private void setup_item_rows() {
 		grid = new GridPane();
@@ -253,23 +251,23 @@ public class FxView {
 		select_menu.getStyleClass().add("global_menu");
 
 		select_menu.setOnMousePressed(me ->
-				selection_menu.show(select_menu, me.getScreenX(), me.getScreenY()));
-		
+		selection_menu.show(select_menu, me.getScreenX(), me.getScreenY()));
+
 		remove.setOnAction(a -> {
-				try {
-					finishEditing();
-					for (Item k : selected)
-						pos.removeKid(k);
-					setup();
-				} catch (Warning w) {
-					warn(w.getMessage());
-				}
-			});
+			try {
+				finishEditing();
+				for (Item k : selected)
+					pos.removeKid(k);
+				setup();
+			} catch (Warning w) {
+				warn(w.getMessage());
+			}
+		});
 		clear.setOnAction(a-> {
-				selected.clear();
-				pos.copying = false;
-				setup();				
-			});
+			selected.clear();
+			pos.copying = false;
+			setup();				
+		});
 		select_all.setOnAction(a -> {
 			finishEditing();
 			int i = 0;
@@ -280,11 +278,11 @@ public class FxView {
 			}				
 		});
 		copy.setOnAction(a -> {
-				finishEditing();
-				for (Item k : selected) {
-					pos.extendCopy(k);
-				}
-				setup();
+			finishEditing();
+			for (Item k : selected) {
+				pos.extendCopy(k);
+			}
+			setup();
 		});
 		check.setOnAction(a -> {
 			finishEditing();
@@ -319,21 +317,21 @@ public class FxView {
 		b.getStyleClass().add("filter_menu");
 
 		b.setOnMousePressed(me ->
-			filtering_menu.show(b, me.getScreenX(), me.getScreenY()));
+		filtering_menu.show(b, me.getScreenX(), me.getScreenY()));
 		completed.setOnAction(a -> {
-				finishEditing();
-				pos.toggleShowCompleted();
-				setup();
-			});
+			finishEditing();
+			pos.toggleShowCompleted();
+			setup();
+		});
 		sort_date.setOnAction(a -> {
-				finishEditing();
-				pos.sortKids(SortOrder.DUE_DATE);
-				setup();
+			finishEditing();
+			pos.sortKids(SortOrder.DUE_DATE);
+			setup();
 		});
 		sort_name.setOnAction(a -> {
-				finishEditing();
-				pos.sortKids(SortOrder.ALPHABETIC);
-				setup();
+			finishEditing();
+			pos.sortKids(SortOrder.ALPHABETIC);
+			setup();
 		});
 		return b;
 	}
@@ -391,45 +389,45 @@ public class FxView {
 		add(buttons, menu = new Button("☰"));
 
 		menu.setOnMousePressed(me ->
-				cmenu.show(cb, me.getScreenX(), me.getScreenY()));
+		cmenu.show(cb, me.getScreenX(), me.getScreenY()));
 		remove.setOnAction(e -> {
-				// TODO should check for whether it's okay to remove, really.
-				finishEditing();
-				try {
-					pos.removeKid(k);
-					setup();
-				} catch (Warning w) {
-					warn(w.getMessage());
-				}});
-		edit.setOnAction(e -> {
-				if (pos.isEditing(k)) return; // already editing this name!
-				finishEditing();
-				pos.startEditing(k);
-				setupRow(k, i);}
-		);
-		cb.setOnMouseClicked(me -> {
-				if (me.isMetaDown()) {
-					if (selected.contains(k)) {
-						row.getStyleClass().remove("selected");
-						row.getStyleClass().add("unselected");
-
-						row.setStyle(" -fx-background-color: transparent"); // should not be necessary
-						selected.remove(k);
-					} else {
-						row.getStyleClass().remove("unselected");
-						row.getStyleClass().add("selected");
-						row.setStyle("");
-						selected.add(k);
-					}
-				}}
-		);
-		copy.setOnAction(a -> {
-				finishEditing();
-				pos.extendCopy(k);
+			// TODO should check for whether it's okay to remove, really.
+			finishEditing();
+			try {
+				pos.removeKid(k);
 				setup();
+			} catch (Warning w) {
+				warn(w.getMessage());
+			}});
+		edit.setOnAction(e -> {
+			if (pos.isEditing(k)) return; // already editing this name!
+			finishEditing();
+			pos.startEditing(k);
+			setupRow(k, i);}
+				);
+		cb.setOnMouseClicked(me -> {
+			if (me.isMetaDown()) {
+				if (selected.contains(k)) {
+					row.getStyleClass().remove("selected");
+					row.getStyleClass().add("unselected");
+
+					row.setStyle(" -fx-background-color: transparent"); // should not be necessary
+					selected.remove(k);
+				} else {
+					row.getStyleClass().remove("unselected");
+					row.getStyleClass().add("selected");
+					row.setStyle("");
+					selected.add(k);
+				}
+			}}
+				);
+		copy.setOnAction(a -> {
+			finishEditing();
+			pos.extendCopy(k);
+			setup();
 		});
 	}
-	
+
 	String item_desc(Set<Item> s) {
 		StringBuilder b = new StringBuilder();
 		b.append(s.size());
@@ -486,17 +484,17 @@ public class FxView {
 		r2.getStyleClass().add("copied");
 		
 		clear.setOnAction(a -> {
-				pos.copying = false;
-				setup();
-			});
+			pos.copying = false;
+			setup();
+		});
 		
 		paste.setOnAction(ae -> {
-				try {
-					pos.doCopy();
-					setup();
-				} catch (Warning w) {
-					warn(w.getMessage());
-				}
+			try {
+				pos.doCopy();
+				setup();
+			} catch (Warning w) {
+				warn(w.getMessage());
+			}
 		});
 	}
 	
@@ -506,16 +504,14 @@ public class FxView {
 			setupRow(pos.edit_item, edit_row);				
 		}
 	}
-	
 
 	private void addHandlers(final CheckBox cb, Button down, final Item k) {
 		assert k != null;
 		cb.setOnAction(e -> k.setFulfilled(!cb.isSelected()));
-
 		if (down != null) down.setOnAction(e -> {
-				finishEditing();
-				pos.moveDownTo(k);
-				setup();
-			});
+			finishEditing();
+			pos.moveDownTo(k);
+			setup();
+		});
 	}
 }
