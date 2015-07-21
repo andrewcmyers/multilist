@@ -1,6 +1,12 @@
 package multilist;
 
 import java.text.ParseException;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,6 +24,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
@@ -125,6 +132,14 @@ public class FxView {
 		c.add(global_menus);
 		setup_copy_buffer(c);
 	}
+
+	static ZoneOffset zone_offset;
+	{
+		LocalDateTime dt = LocalDateTime.now();
+		ZoneId zid = ZoneId.systemDefault();
+		ZonedDateTime zdt = dt.atZone(zid);
+		zone_offset = zdt.getOffset();
+	}
 	
 	private Node setup_due_date() {
 		VBox v = new VBox();
@@ -132,25 +147,22 @@ public class FxView {
 		add(v, h);
 		add(h, new Text("Due:"));
 		
-		final TextField t = new TextField(
-				(pos.current().dueDate() != null) ? 
-				pos.dateString(pos.current().dueDate()):
-					"none");
-		add (h,t);
+		Date due = pos.current().dueDate();
+		LocalDate date = due == null ?
+				  null
+				: pos.current().dueDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+		final DatePicker datePicker = new DatePicker();
+		add(h, datePicker);
+
+		datePicker.setValue(date);
+		datePicker.setOnAction(e -> {
+			Date nw = datePicker.getValue() == null ? null
+					: new Date(datePicker.getValue().atTime(23, 59).toInstant(zone_offset).toEpochMilli());
+			pos.current().setDate(nw);
+		});
 		
 		Date now = new Date();
-		
-		t.setOnAction(a -> {
-				try {
-					if (t.getText().equals("none")) pos.setDate(null);
-					else {
-						Date d = Position.dateFormat.parse(t.getText());
-						pos.setDate(d);
-					}
-				} catch (ParseException e) {
-					warn("could not parse date " + e.getMessage());
-				}
-		});
+
 		if (pos.current().numKids() > 0) {
 			DateAnalysis r = pos.analyzeDates();
 			if (r.first_k != null) {

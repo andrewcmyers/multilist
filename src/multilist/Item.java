@@ -56,8 +56,7 @@ public class Item implements Iterable<Item>, Serializable {
 		parent.kids.add(this);
 		kid_ordering = new ArrayList<>();
 		parent.kid_ordering.add(this);
-		Date now = new Date();
-		due_date = new Date(now.getTime() + 86400*1000); // default: tomorrow
+		due_date = null; // default: no due date
 		assert invariant();
 	}
 
