@@ -1,10 +1,10 @@
 package multilist;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -12,7 +12,7 @@ import java.util.Set;
 import multilist.Position.Warning;
 
 public class Item implements Iterable<Item>, Serializable {
-	private static final long serialVersionUID = -9103146750499516106L;
+	private static final long serialVersionUID = -1641355975895301388L;
 	private String name;
 	private Set<Item> parents = newItems();
 	private Set<Item> kids = newItems();
@@ -20,7 +20,7 @@ public class Item implements Iterable<Item>, Serializable {
 	 * Should ideally be user-specific and factored out into a separate class.
 	*/
 	private ArrayList<Item> kid_ordering = new ArrayList<>(); 
-	private Date due_date; // may be null if no due date
+	private LocalDate due_date; // may be null if no due date
 	int quantity = 1;
 	boolean fulfilled = true;
 	private String note = "";
@@ -139,16 +139,17 @@ public class Item implements Iterable<Item>, Serializable {
 	public void setFulfilled(boolean f) {
 		if (isRoot()) return;
 		if (fulfilled == f) return;
-		if (!f && due_date != null && due_date.before(new Date())) {
-			due_date = new Date();
+		LocalDate now = LocalDate.now();
+		if (!f && due_date != null && due_date.isBefore(now)) {
+			due_date = now;
 			boolean bumped = false;
 			for (Item k : kids) {
-				if (due_date.before(k.due_date)) {
+				if (due_date.isBefore(k.due_date)) {
 					due_date = k.due_date;
 					bumped = true;
 				}
 			}
-			if (!bumped) due_date = new Date(new Date().getTime() + 86400*1000L);
+			if (!bumped) due_date = now.plusDays(1);
 		}
 		fulfilled = f;
 		outer: for (Item p : parents) {
@@ -162,7 +163,7 @@ public class Item implements Iterable<Item>, Serializable {
 		}
 	}
 	
-	public Date dueDate() {
+	public LocalDate dueDate() {
 		return due_date;
 	}
 
@@ -205,7 +206,8 @@ public class Item implements Iterable<Item>, Serializable {
 		return kid_ordering;
 	}
 
-	public void setDate(Date d) {
+	/** d may be null if there is no due date. */
+	public void setDueDate(LocalDate d) {
 		due_date = d;
 	}
 }

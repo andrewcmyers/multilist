@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Observable;
@@ -145,21 +144,16 @@ public class FxView {
 		add(v, h);
 		add(h, new Text("Due:"));
 		
-		Date due = pos.current().dueDate();
-		LocalDate date = due == null ?
-				  null
-				: pos.current().dueDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+		LocalDate date = pos.current().dueDate();
 		final DatePicker datePicker = new DatePicker();
 		add(h, datePicker);
 
 		datePicker.setValue(date);
 		datePicker.setOnAction(e -> {
-			Date nw = datePicker.getValue() == null ? null
-					: new Date(datePicker.getValue().atTime(23, 59).toInstant(zone_offset).toEpochMilli());
-			pos.current().setDate(nw);
+			pos.current().setDueDate(datePicker.getValue());
 		});
 		
-		Date now = new Date();
+		LocalDate now = LocalDate.now();
 
 		if (pos.current().numKids() > 0) {
 			DateAnalysis r = pos.analyzeDates();
@@ -167,18 +161,18 @@ public class FxView {
 				HBox h2 = new HBox(), h3 = new HBox();
 
 				add(h2, new Text("First due: " + r.first_k.name() + ", "));
-				Label ds1 = new Label(pos.dateString(r.first));
+				Label ds1 = new Label(r.first.toString());
 				add(h2, ds1);
-				if (r.first.before(now))
+				if (r.first.isBefore(now))
 					ds1.getStyleClass().add("overdue");
-				if (pos.current().dueDate() != null && r.first.after(pos.current().dueDate()))
+				if (pos.current().dueDate() != null && r.first.isAfter(pos.current().dueDate()))
 					ds1.getStyleClass().add("too_late");
 
 				if (pos.current().dueDate() != null && r.first_k != r.last_k) {
 					add(h3, new Text("Last due: "+ r.last_k.name() + ", "));
-					Label ds = new Label(pos.dateString(r.last));
+					Label ds = new Label(r.last.toString());
 					add(h3, ds);
-					if (r.last.after(pos.current().dueDate()))
+					if (r.last.isAfter(pos.current().dueDate()))
 						ds.getStyleClass().add("too_late");
 				}
 				add(v, h2, h3);

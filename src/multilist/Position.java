@@ -1,11 +1,9 @@
 package multilist;
 
 import java.text.DateFormat;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Observable;
 import java.util.Set;
 
@@ -134,31 +132,31 @@ public class Position extends Observable {
 		editing = true;
 		edit_item = k;
 	}
-	public String dateString(Date dueDate) {
-		Date now = new Date();
-		Calendar c1 = Calendar.getInstance();
-		Calendar c2 = Calendar.getInstance();
-		Locale loc = Locale.getDefault();
-		long yearMillis = 365L * 24L * 3600L * 1000L;
-		c1.setTime(now);
-		c2.setTimeInMillis(dueDate.getTime());
-		
-		
-		double diff = (c2.getTimeInMillis() - c1.getTimeInMillis())/(0.0 + yearMillis);
-		
-		String m = c2.getDisplayName(Calendar.MONTH, Calendar.LONG, loc);
-		String d = Integer.toString(c2.get(Calendar.DAY_OF_MONTH));
-		StringBuilder b = new StringBuilder();
-		if (diff > 0.75 || diff < -0.25) {
-			b.append(c2.get(Calendar.YEAR));
-			b.append(' ');
-		}
-		b.append(m);
-		b.append(' ');
-		b.append(d);
-//		return b.toString();
-		return Position.dateFormat.format(dueDate);
-	}
+//	public String dateString(LocalDate dueDate) {
+//		Date now = new Date();
+//		Calendar c1 = Calendar.getInstance();
+//		Calendar c2 = Calendar.getInstance();
+//		Locale loc = Locale.getDefault();
+//		long yearMillis = 365L * 24L * 3600L * 1000L;
+//		c1.setTime(now);
+//		c2.setTimeInMillis(dueDate.getTime());
+//		
+//		
+//		double diff = (c2.getTimeInMillis() - c1.getTimeInMillis())/(0.0 + yearMillis);
+//		
+//		String m = c2.getDisplayName(Calendar.MONTH, Calendar.LONG, loc);
+//		String d = Integer.toString(c2.get(Calendar.DAY_OF_MONTH));
+//		StringBuilder b = new StringBuilder();
+//		if (diff > 0.75 || diff < -0.25) {
+//			b.append(c2.get(Calendar.YEAR));
+//			b.append(' ');
+//		}
+//		b.append(m);
+//		b.append(' ');
+//		b.append(d);
+////		return b.toString();
+//		return Position.dateFormat.format(dueDate);
+//	}
 	
 	void notifyChanged() {
 		setChanged();
@@ -167,7 +165,7 @@ public class Position extends Observable {
 	
 	static class DateAnalysis {
 		Item first_k, last_k;
-		Date first, last;
+		LocalDate first, last;
 	}
 
 	DateAnalysis analyzeDates() {
@@ -175,11 +173,11 @@ public class Position extends Observable {
 	
 		if (current.numKids() > 0) {
 			for (Item k : current) {
-				if (k.dueDate() != null && (r.first == null || k.dueDate().before(r.first))) {
+				if (k.dueDate() != null && !k.fulfilled && (r.first == null || k.dueDate().isBefore(r.first))) {
 					r.first = k.dueDate();
 					r.first_k = k;
 				}
-				if (k.dueDate() != null && (r.last == null || k.dueDate().after(r.last))) {
+				if (k.dueDate() != null && !k.fulfilled && (r.last == null || k.dueDate().isAfter(r.last))) {
 					r.last = k.dueDate();
 					r.last_k = k;
 				}
@@ -213,8 +211,8 @@ public class Position extends Observable {
 		k.setName(text);
 		notifyChanged();		
 	}
-	public void setDate(Date d) {
-		current.setDate(d);
+	public void setDate(LocalDate d) {
+		current.setDueDate(d);
 		notifyChanged();		
 	}
 }
