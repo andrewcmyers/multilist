@@ -1,6 +1,7 @@
 package multilist;
 
 import java.text.DateFormat;
+import multilist.Item.Warning;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -81,11 +82,6 @@ public class Position extends Observable {
 		}
 		copy_buffer.add(k);
 	}
-	@SuppressWarnings("serial")
-	public static class Warning extends Exception {
-		public Warning(String msg) { super(msg); }
-	}
-	
 	/** return error message if some part of the copy failed. */
 	public void doCopy() throws Warning {
 		if (!copying) throw new Warning("Nothing ready to copy.");
@@ -199,7 +195,7 @@ public class Position extends Observable {
 		current.addKid(k);
 		notifyChanged();		
 	}
-	public void removeKid(Item k) throws Warning {
+	public void removeKid(Item k) throws Item.Warning {
 		current.removeKid(k);
 		notifyChanged();		
 	}

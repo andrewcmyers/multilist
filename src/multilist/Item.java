@@ -9,22 +9,21 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import multilist.Position.Warning;
-
 public class Item implements Iterable<Item>, Serializable {
 	private static final long serialVersionUID = -1641355975895301388L;
 	private String name;
 	private Set<Item> parents = newItems();
 	private Set<Item> kids = newItems();
 	/** kid_ordering: the order in which the kids are presented.
-	 * Should ideally be user-specific and factored out into a separate class.
+	 * XXX In a multiuser system, this should be user-specific
+	 * and factored out into a separate class.
 	*/
 	private ArrayList<Item> kid_ordering = new ArrayList<>(); 
 	private LocalDate due_date; // may be null if no due date
 	int quantity = 1;
 	boolean fulfilled = true;
 	private String note = "";
-	/** whether to show fulfilled kids. Should ideally be user-specific. */
+	/** whether to show fulfilled kids. XXX In a multiuser system, this should be user-specific. */
 	public boolean showFulfilled = true;
 	
 	/** Invariant:
@@ -45,6 +44,10 @@ public class Item implements Iterable<Item>, Serializable {
 		}
 		
 		return true;
+	}
+	@SuppressWarnings("serial")
+	public static class Warning extends Exception {
+		public Warning(String msg) { super(msg); }
 	}
 	
 	public Item(String name, Item parent) {
@@ -211,3 +214,5 @@ public class Item implements Iterable<Item>, Serializable {
 		due_date = d;
 	}
 }
+
+

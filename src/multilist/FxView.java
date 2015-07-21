@@ -36,8 +36,8 @@ import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import multilist.Item.Warning;
 import multilist.Position.DateAnalysis;
-import multilist.Position.Warning;
 
 /** GUI state associated with the current view. */
 public class FxView {
