@@ -1,4 +1,4 @@
-package multilist;
+package edu.cornell.cs.multilist;
 
 public interface Saver {
 	boolean fileChosen();

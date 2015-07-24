@@ -1,15 +1,15 @@
-package multilist;
+package edu.cornell.cs.multilist.model;
 
 import java.text.DateFormat;
-import multilist.Item.Warning;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Observable;
 import java.util.Set;
 
+import edu.cornell.cs.multilist.model.Item.Warning;
+
 /** A Position represents a current view of the system. It is independent of the GUI framework but
- *  contains non-persistent state associated with the current view.
+ *  contains non-persistent state associated with the current view. Does not use Java 8 features.
  */
 public class Position extends Observable {
 	private Model model;
@@ -18,20 +18,20 @@ public class Position extends Observable {
 	private Item current;
 	public Item current() { return current; }
 	public Model model() { return model; }
-	boolean editing = false;
-	Item edit_item; // member of current if editing is true.
-	boolean copying = false;
-	Set<Item> copy_buffer;
+	private boolean editing = false;
+	private Item edit_item; // member of current if editing is true.
+	private boolean copying = false;
+	private Set<Item> copy_buffer;
 	static final DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.LONG);
 	
-	boolean invariant() {
+	public boolean invariant() {
 		if (!current.isRoot()) {
 			assert path.get(path.size() - 1).hasKid(current);
 		}
 		for (int i = 0; i < path.size() - 1; i++) {
 			assert path.get(i).hasKid(path.get(i + 1));
 		}
-		if (editing) {
+		if (isEditing()) {
 			assert edit_item != null && current.hasKid(edit_item);
 		}
 		if (copying) {
@@ -43,7 +43,7 @@ public class Position extends Observable {
 		model = m;
 		current = m.root;
 		path = new ArrayList<Item>();
-		editing = false;	
+		editing = false;
 		assert invariant();
 	}
 
@@ -63,7 +63,7 @@ public class Position extends Observable {
 		assert invariant();
 	}
 
-	Iterable<Item> items() {
+	public Iterable<Item> items() {
 		return current.orderedKids();
 	}
 	public Item createKid() {
@@ -75,9 +75,9 @@ public class Position extends Observable {
 
 	/** Add k to the current copy selection. Requires: not editing. */
 	public void extendCopy(Item k) {
-		assert !editing;
+		assert !isEditing();
 		if (!copying) {
-			copy_buffer = new HashSet<>();
+			copy_buffer = new HashSet<Item>();
 			copying = true;
 		}
 		copy_buffer.add(k);
@@ -94,7 +94,7 @@ public class Position extends Observable {
 	}
 
 	private boolean reachable(Item k1, Item k2) {
-		Set<Item> seen = new HashSet<>();
+		Set<Item> seen = new HashSet<Item>();
 		return reachable1(k1, k2, seen);
 	}
 	private boolean reachable1(Item k1, Item k2, Set<Item> seen) {
@@ -112,17 +112,17 @@ public class Position extends Observable {
 	public void toggleShowCompleted() {
 		current.showFulfilled = !current.showFulfilled;	
 	}
-	boolean isEditing(Item k) {
+	public boolean isEditing(Item k) {
 		return (editing && k == edit_item);
 	}
 	public void finishEditing(String value) {
-		assert editing;
+		assert isEditing();
 		Item it = edit_item;
 		setName(it, value);
 		editing = false;
 	}
 
-	void startEditing(Item k) {
+	public void startEditing(Item k) {
 		assert !editing;
 		
 		editing = true;
@@ -159,27 +159,42 @@ public class Position extends Observable {
 		notifyObservers();
 	}
 	
-	static class DateAnalysis {
-		Item first_k, last_k;
-		LocalDate first, last;
+	public static class DateAnalysis {
+		public Item first_k, last_k;
+		public ItemDate first, last;
 	}
 
-	DateAnalysis analyzeDates() {
+	public DateAnalysis analyzeDates() {
 		DateAnalysis r = new DateAnalysis();
 	
 		if (current.numKids() > 0) {
 			for (Item k : current) {
-				if (k.dueDate() != null && !k.fulfilled && (r.first == null || k.dueDate().isBefore(r.first))) {
+				if (k.dueDate() != null && !k.isFulfilled() && (r.first == null || k.dueDate().isBefore(r.first))) {
 					r.first = k.dueDate();
 					r.first_k = k;
 				}
-				if (k.dueDate() != null && !k.fulfilled && (r.last == null || k.dueDate().isAfter(r.last))) {
+				if (k.dueDate() != null && !k.isFulfilled() && (r.last == null || k.dueDate().isAfter(r.last))) {
 					r.last = k.dueDate();
 					r.last_k = k;
 				}
 			}
 		}
 		return r;
+	}
+	
+	/** A description of the current item and its parents. */
+	public String topline(Item k) {
+		StringBuilder b = new StringBuilder();
+		b.append("   ");
+		b.append(k.name());
+		boolean first = true;
+		for (Item i : k.parents()) {
+			if (i == model().root) continue;
+			b.append(first ? "→" : ", ");
+			first = false;
+			b.append(i.name());
+		}
+		return b.toString();
 	}
 
 	// Item mutators that notify the model.
@@ -207,8 +222,29 @@ public class Position extends Observable {
 		k.setName(text);
 		notifyChanged();		
 	}
-	public void setDate(LocalDate d) {
+	public void setDate(ItemDate d) {
 		current.setDueDate(d);
 		notifyChanged();		
+	}
+	public boolean isEditing() {
+		return editing;
+	}
+	public Item editItem() {
+		return edit_item;
+	}
+	public String dateString(ItemDate date) {
+		return date.toString();
+	}
+	public boolean isCopying() {
+		return copying;
+	}
+//	public void setCopying(boolean copying) {
+//		this.copying = copying;
+//	}
+	public Set<Item> copyBuffer() {
+		return copy_buffer;
+	}
+	public void stopCopying() {
+		copying = false;
 	}
 }

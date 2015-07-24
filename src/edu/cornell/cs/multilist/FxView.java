@@ -1,16 +1,21 @@
-package multilist;
+package edu.cornell.cs.multilist;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 
+import edu.cornell.cs.multilist.model.DateFactory;
+import edu.cornell.cs.multilist.model.Item;
+import edu.cornell.cs.multilist.model.Item.Warning;
+import edu.cornell.cs.multilist.model.ItemDate;
+import edu.cornell.cs.multilist.model.LocalItemDate;
+import edu.cornell.cs.multilist.model.Model;
+import edu.cornell.cs.multilist.model.Position;
+import edu.cornell.cs.multilist.model.Position.DateAnalysis;
+import edu.cornell.cs.multilist.model.SortOrder;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -36,23 +41,22 @@ import javafx.scene.text.Text;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import multilist.Item.Warning;
-import multilist.Position.DateAnalysis;
 
 /** GUI state associated with the current view. */
 public class FxView {
+	Position pos;
+	int edit_row; // which row of the grid is being edited.
+	boolean unsaved_update;
+	Set<Item> selected = new HashSet<>();
+
 	VBox box;
 	GridPane grid;
-	Position pos;
 	StringProperty edit_text;
-	int edit_row; // which row of the grid is being edited.
 	HashMap<Item, Pane> itemPanes;
-	Set<Item> selected = new HashSet<>();
 	Button select_menu;
 	Pane copy_buffer;
 	private Stage stage;
 	Saver saver;
-	boolean unsaved_update;
 		
 	FxView(Model m, Stage s, Saver saver) {
 		this.saver = saver;
@@ -74,10 +78,7 @@ public class FxView {
 
 	boolean invariant() {
 		assert pos.invariant();
-		for (Item i : pos.items()) {
-			assert itemPanes.get(i) != null;
-		}
-		assert itemPanes.size() == pos.current().numKids();
+		assert itemPanes.size() <= pos.current().numKids();
 		return true;
 	}
 	private void setup_periodic_save() {
@@ -98,20 +99,6 @@ public class FxView {
 		delay.play();
 	}
 
-	String topline(Item k) {
-		StringBuilder b = new StringBuilder();
-		b.append("   ");
-		b.append(k.name());
-		boolean first = true;
-		for (Item i : k.parents()) {
-			if (i == pos.model().root) continue;
-			b.append(first ? "→" : ", ");
-			first = false;
-			b.append(i.name());
-		}
-		return b.toString();
-	}
-
 	void setup() {
 		final ObservableList<Node> c = box.getChildren();
 		c.clear();
@@ -119,7 +106,7 @@ public class FxView {
 		c.add(setup_top_line());
 		setup_item_rows();
 		c.add(grid);
-		if (!pos.current().fulfilled)
+		if (!pos.current().isFulfilled())
 			c.add(setup_due_date());
 
 		c.add(setup_notes());
@@ -129,14 +116,6 @@ public class FxView {
 		c.add(global_menus);
 		setup_copy_buffer(c);
 	}
-
-	static ZoneOffset zone_offset;
-	{
-		LocalDateTime dt = LocalDateTime.now();
-		ZoneId zid = ZoneId.systemDefault();
-		ZonedDateTime zdt = dt.atZone(zid);
-		zone_offset = zdt.getOffset();
-	}
 	
 	private Node setup_due_date() {
 		VBox v = new VBox();
@@ -144,16 +123,18 @@ public class FxView {
 		add(v, h);
 		add(h, new Text("Due:"));
 		
-		LocalDate date = pos.current().dueDate();
+		LocalItemDate date = (LocalItemDate) pos.current().dueDate();
 		final DatePicker datePicker = new DatePicker();
 		add(h, datePicker);
 
-		datePicker.setValue(date);
+		if (date != null)
+			datePicker.setValue(date.localDate());
 		datePicker.setOnAction(e -> {
-			pos.current().setDueDate(datePicker.getValue());
+			LocalDate d = datePicker.getValue();
+				pos.current().setDueDate(DateFactory.create(d));
 		});
 		
-		LocalDate now = LocalDate.now();
+		ItemDate now = DateFactory.now();
 
 		if (pos.current().numKids() > 0) {
 			DateAnalysis r = pos.analyzeDates();
@@ -195,7 +176,7 @@ public class FxView {
 		HBox toprow = new HBox();
 		if (!current.isRoot()) {
 			Button up;
-			add(toprow, up = new Button("▲"), new Text(topline(current)));
+			add(toprow, up = new Button("▲"), new Text(pos.topline(current)));
 			up.setOnAction(a -> {
 				finishEditing();
 				pos.moveUp();
@@ -212,7 +193,7 @@ public class FxView {
 		int i = 0;
 
 		for (Item k : pos.items()) {
-			if (!current.showFulfilled && k.fulfilled) continue;
+			if (!current.showFulfilled && k.isFulfilled()) continue;
 			Pane h = new HBox();
 			itemPanes.put(k, h);
 			grid.add(h, 0, i);
@@ -242,10 +223,10 @@ public class FxView {
 		selection_menu.getItems().addAll(select_all, check, uncheck, copy, remove, clear);
 		select_menu = new Button("☰");
 
-		select_menu.getStyleClass().add("global_menu");
+		select_menu.getStyleClass().add("select_menu");
 
 		select_menu.setOnMousePressed(me ->
-		selection_menu.show(select_menu, me.getScreenX(), me.getScreenY()));
+			selection_menu.show(select_menu, me.getScreenX(), me.getScreenY()));
 
 		remove.setOnAction(a -> {
 			try {
@@ -259,7 +240,7 @@ public class FxView {
 		});
 		clear.setOnAction(a-> {
 			selected.clear();
-			pos.copying = false;
+			pos.stopCopying();
 			setup();				
 		});
 		select_all.setOnAction(a -> {
@@ -351,9 +332,8 @@ public class FxView {
 			edit_text = tf.textProperty();
 			add(checkbox_area, cb = new CheckBox(), tf);
 			tf.setOnAction(e -> {
-					pos.setName(k, tf.getText());
-					pos.editing = false;
-					setupRow(k, i);
+				pos.finishEditing(tf.getText());
+				setupRow(k, i);
 			});
 			tf.selectAll();
 			tf.end();
@@ -367,7 +347,7 @@ public class FxView {
 		HBox.setHgrow(spacer, Priority.ALWAYS);
 		spacer.setMinWidth(Region.USE_PREF_SIZE);
 
-		cb.setSelected(!k.fulfilled);
+		cb.setSelected(!k.isFulfilled());
 		
 		HBox buttons = new HBox();
 		grid.add(buttons,  2,  i);
@@ -380,12 +360,13 @@ public class FxView {
 		MenuItem edit = new MenuItem("edit");
 		MenuItem copy = new MenuItem("copy");
 		cmenu.getItems().addAll(edit, copy, remove);
+		cmenu.getStyleClass().add("item_menu");
 		add(buttons, menu = new Button("☰"));
+		menu.getStyleClass().add("item_menu_button");
 
 		menu.setOnMousePressed(me ->
-		cmenu.show(cb, me.getScreenX(), me.getScreenY()));
+			cmenu.show(cb, me.getScreenX(), me.getScreenY()));
 		remove.setOnAction(e -> {
-			// TODO should check for whether it's okay to remove, really.
 			finishEditing();
 			try {
 				pos.removeKid(k);
@@ -399,18 +380,18 @@ public class FxView {
 			pos.startEditing(k);
 			setupRow(k, i);}
 				);
-		cb.setOnMouseClicked(me -> {
+		row.setOnMouseClicked(me -> {
 			if (me.isMetaDown()) {
 				if (selected.contains(k)) {
 					row.getStyleClass().remove("selected");
 					row.getStyleClass().add("unselected");
 
-					row.setStyle(" -fx-background-color: transparent"); // should not be necessary
+//					row.setStyle(" -fx-background-color: transparent"); // needed in JavaFX 2.2!?
 					selected.remove(k);
 				} else {
 					row.getStyleClass().remove("unselected");
 					row.getStyleClass().add("selected");
-					row.setStyle("");
+//					row.setStyle(""); // needed in JavaFX 2.2!?
 					selected.add(k);
 				}
 			}}
@@ -429,7 +410,6 @@ public class FxView {
 		else b.append(" items");
 		return b.toString();
 	}
-	
 	
 	static Pane add(Pane p, Node n) {
 		p.getChildren().add(n);
@@ -455,13 +435,13 @@ public class FxView {
 	}
 	
 	private void setup_copy_buffer(ObservableList<Node> c) {
-		if (!pos.copying) return;
+		if (!pos.isCopying()) return;
 		Region r = new Region();
 		c.add(r);
 		r.setMinHeight(15);
 		copy_buffer = new VBox();
 		c.add(copy_buffer);
-		Text t = new Text(item_desc(pos.copy_buffer));
+		Text t = new Text(item_desc(pos.copyBuffer()));
 		
 		HBox h = new HBox();
 		VBox r2 = new VBox();
@@ -478,7 +458,7 @@ public class FxView {
 		r2.getStyleClass().add("copied");
 		
 		clear.setOnAction(a -> {
-			pos.copying = false;
+			pos.stopCopying();
 			setup();
 		});
 		
@@ -493,9 +473,9 @@ public class FxView {
 	}
 	
 	void finishEditing() {
-		if (pos.editing) {
+		if (pos.isEditing()) {
 			pos.finishEditing(edit_text.getValue());
-			setupRow(pos.edit_item, edit_row);				
+			setupRow(pos.editItem(), edit_row);				
 		}
 	}
 

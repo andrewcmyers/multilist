@@ -1,4 +1,4 @@
-package multilist;
+package edu.cornell.cs.multilist;
 
 @SuppressWarnings("serial")
 public class SaveFailed extends Exception {

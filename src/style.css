@@ -14,11 +14,14 @@
     -fx-background-color: #dff;
 }
 
-.global_menu {
-    -fx-color: #08f;
+.select_menu {
+    -fx-background-color: #4af;
 }
 .filter_menu {
-	-fx-color: #f80;
+    -fx-color: #f80;
+}
+.item_menu_button {
+	-fx-color: yellow;
 }
 
 .checkbox {

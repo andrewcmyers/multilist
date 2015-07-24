@@ -1,7 +1,6 @@
-package multilist;
+package edu.cornell.cs.multilist.model;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -10,7 +9,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class Item implements Iterable<Item>, Serializable {
-	private static final long serialVersionUID = -1641355975895301388L;
+	private static final long serialVersionUID = -7216453968867906427L;
 	private String name;
 	private Set<Item> parents = newItems();
 	private Set<Item> kids = newItems();
@@ -18,10 +17,10 @@ public class Item implements Iterable<Item>, Serializable {
 	 * XXX In a multiuser system, this should be user-specific
 	 * and factored out into a separate class.
 	*/
-	private ArrayList<Item> kid_ordering = new ArrayList<>(); 
-	private LocalDate due_date; // may be null if no due date
+	private ArrayList<Item> kid_ordering = new ArrayList<Item>(); 
+	private ItemDate due_date; // may be null if no due date
 	int quantity = 1;
-	boolean fulfilled = true;
+	private boolean fulfilled = true;
 	private String note = "";
 	/** whether to show fulfilled kids. XXX In a multiuser system, this should be user-specific. */
 	public boolean showFulfilled = true;
@@ -57,17 +56,18 @@ public class Item implements Iterable<Item>, Serializable {
 		parents.add(parent);
 
 		parent.kids.add(this);
-		kid_ordering = new ArrayList<>();
+		kid_ordering = new ArrayList<Item>();
 		parent.kid_ordering.add(this);
 		due_date = null; // default: no due date
 		assert invariant();
 	}
 
-	public static final Item root = new Item();
+//	public static final Item root = new Item();
 	
-	static Item root() { return root; }
+//	public static Item root() { return root; }
 	
-	private Item() {
+	/** Return a new (root) item. */
+	public Item() {
 		name = "ALL";
 		assert invariant();
 	}	
@@ -75,7 +75,7 @@ public class Item implements Iterable<Item>, Serializable {
 		return new HashSet<Item>();
 	}
 
-	boolean hasKid(Item k) {
+	public boolean hasKid(Item k) {
 		return kids.contains(k);
 	}
 
@@ -99,7 +99,7 @@ public class Item implements Iterable<Item>, Serializable {
 	public void setNote(String n) {
 		note = n;
 	}
-	boolean isRoot() {
+	public boolean isRoot() {
 		return parents.size() == 0;
 	}
 	public boolean addKid(Item k) {
@@ -142,7 +142,7 @@ public class Item implements Iterable<Item>, Serializable {
 	public void setFulfilled(boolean f) {
 		if (isRoot()) return;
 		if (fulfilled == f) return;
-		LocalDate now = LocalDate.now();
+		ItemDate now = DateFactory.now();
 		if (!f && due_date != null && due_date.isBefore(now)) {
 			due_date = now;
 			boolean bumped = false;
@@ -166,11 +166,12 @@ public class Item implements Iterable<Item>, Serializable {
 		}
 	}
 	
-	public LocalDate dueDate() {
+	public ItemDate dueDate() {
 		return due_date;
 	}
 
 	static final Item[] dummy = new Item[0];
+	public static final ItemDate NO_DATE = null;
 
 	public void sortKids(SortOrder order) {
 		kid_ordering = new ArrayList<Item>();
@@ -210,8 +211,12 @@ public class Item implements Iterable<Item>, Serializable {
 	}
 
 	/** d may be null if there is no due date. */
-	public void setDueDate(LocalDate d) {
+	public void setDueDate(ItemDate d) {
 		due_date = d;
+	}
+
+	public boolean isFulfilled() {
+		return fulfilled;
 	}
 }
 
