@@ -9,7 +9,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 
-import edu.cornell.cs.multilist.model.Converter;
+//import edu.cornell.cs.multilist.model.Converter;
 import edu.cornell.cs.multilist.model.Item;
 import edu.cornell.cs.multilist.model.Model;
 import javafx.application.Application;
@@ -54,10 +54,11 @@ public class JavaFX extends Application {
 //				System.out.println("Read " + m);
 				if (m instanceof Model) {
 					model = (Model) m;
-				} else if (m instanceof multilist.v1.Model) {
-					System.out.println("This is a version 1 model.");
-					model = Converter.convert((multilist.v1.Model) m);
 				}
+//				else if (m instanceof multilist.v1.Model) {
+//					System.out.println("This is a version 1 model.");
+//					model = Converter.convert((multilist.v1.Model) m);
+//				}
 //				System.out.println("Read successful.");
 
 				input.close();

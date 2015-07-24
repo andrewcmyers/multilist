@@ -195,7 +195,12 @@ public class Item implements Iterable<Item>, Serializable {
 			return new Comparator<Item>() {
 				@Override
 				public int compare(Item o1, Item o2) {
-					return o1.dueDate().compareTo(o2.dueDate());
+					ItemDate d1 = o1.dueDate(), d2 = o2.dueDate();
+					if (d1 == null && d2 == null)
+						return 0;
+					if (d1 == null) return -1;
+					if (d2 == null) return 1;
+					return d1.compareTo(d2);
 				}
 			};
 		}
