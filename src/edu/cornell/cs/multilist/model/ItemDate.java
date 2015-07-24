@@ -5,4 +5,5 @@ public interface ItemDate {
 	boolean isAfter(ItemDate d);
 	int compareTo(ItemDate d);
 	ItemDate plusDays(int days);
+	long getTimeMillis();
 }

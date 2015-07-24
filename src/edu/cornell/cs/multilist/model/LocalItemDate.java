@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -62,10 +63,15 @@ public class LocalItemDate implements ItemDate, Serializable {
 			DateTimeFormatter.ofPattern("MMMM d");
 
 	public String toString() {
-		return localDate().format(date_format);
+		return date.format(date_format);
 	}
 	
 	public LocalDate localDate() {
 		return date;
+	}
+	@Override
+	public long getTimeMillis() {
+		LocalDateTime ldt = LocalDateTime.of(date,  LocalTime.of(23, 59));
+		return ldt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 	}
 }
