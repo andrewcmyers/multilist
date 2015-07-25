@@ -81,6 +81,7 @@ public class FxView {
 		assert itemPanes.size() <= pos.current().numKids();
 		return true;
 	}
+	
 	private void setup_periodic_save() {
 		final PauseTransition delay = new PauseTransition(Duration.seconds(10));
 		delay.setCycleCount(1);
@@ -264,7 +265,6 @@ public class FxView {
 			for (Item k: selected)
 				pos.setFulfilled(k, false, FXDateFactory.now());
 			setup();
-
 		});
 		uncheck.setOnAction(a -> {
 			finishEditing();
