@@ -7,7 +7,7 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 
-import edu.cornell.cs.multilist.model.DateFactory;
+import edu.cornell.cs.multilist.model.FXDateFactory;
 import edu.cornell.cs.multilist.model.Item;
 import edu.cornell.cs.multilist.model.Item.Warning;
 import edu.cornell.cs.multilist.model.ItemDate;
@@ -131,10 +131,10 @@ public class FxView {
 			datePicker.setValue(date.localDate());
 		datePicker.setOnAction(e -> {
 			LocalDate d = datePicker.getValue();
-				pos.current().setDueDate(DateFactory.create(d));
+				pos.current().setDueDate(FXDateFactory.create(d));
 		});
 		
-		ItemDate now = DateFactory.now();
+		ItemDate now = FXDateFactory.now();
 
 		if (pos.current().numKids() > 0) {
 			DateAnalysis r = pos.analyzeDates();

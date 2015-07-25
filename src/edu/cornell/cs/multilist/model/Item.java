@@ -142,7 +142,7 @@ public class Item implements Iterable<Item>, Serializable {
 	public void setFulfilled(boolean f) {
 		if (isRoot()) return;
 		if (fulfilled == f) return;
-		ItemDate now = DateFactory.now();
+		ItemDate now = FXDateFactory.now();
 		if (!f && due_date != null && due_date.isBefore(now)) {
 			due_date = now;
 			boolean bumped = false;

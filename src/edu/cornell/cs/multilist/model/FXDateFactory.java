@@ -2,7 +2,7 @@ package edu.cornell.cs.multilist.model;
 
 import java.time.LocalDate;
 
-public class DateFactory {
+public class FXDateFactory {
 	public static ItemDate now() {
 		return new LocalItemDate(LocalDate.now());
 	}
