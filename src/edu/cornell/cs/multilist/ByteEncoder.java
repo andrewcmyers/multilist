@@ -11,7 +11,7 @@ public class ByteEncoder {
 			if (bi >= ' ' && bi < '~' && bi != '\\') {
 				s.append((char)bi);
 			} else {
-				int code = (int)(bi) & 0xFF;
+				int code = (int)bi & 0xFF;
 				s.append('\\');
 				s.append(hexdigit(code >> 4));
 				s.append(hexdigit(code & 0xf));
@@ -34,12 +34,10 @@ public class ByteEncoder {
 		if (c >= '0' && c <= '9') return (int)c - 48;
 		return (int)c + (10 - 97);
 	}
-
 	static boolean same_array(byte[] a, byte[] b) {
 		if (a.length != b.length) return false;
-		for (int i = 0; i < a.length; i++) {
+		for (int i = 0; i < a.length; i++)
 			if (a[i] != b[i]) return false;
-		}
 		return true;
 	}
 	/** Decode from printable ASCII chars. */
@@ -65,13 +63,7 @@ public class ByteEncoder {
 		}
 		byte[] res = new byte[n];
 		System.arraycopy(b, 0, res, 0, n);
-		assert encode(res).equals(s) || print(encode(res));
+		assert encode(res).equals(s);
 		return res;
-	}
-	
-	static boolean print(String s) {
-		System.err.println(s);
-		return false;
-	}
-	
+	}	
 }

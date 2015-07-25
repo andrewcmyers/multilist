@@ -3,7 +3,7 @@ package edu.cornell.cs.multilist.model;
 import java.util.Date;
 
 public class AndroidDateFactory {
-	static ItemDate now() {
+	public static ItemDate now() {
 		return new MilliDate(new Date().getTime());
 	}
 	public static ItemDate create(long millis) {

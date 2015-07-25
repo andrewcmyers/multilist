@@ -204,7 +204,7 @@ public class FxView {
 		b.setOnAction(a -> {
 			finishEditing();
 			Item it = pos.createKid();
-			pos.setFulfilled(it, false);
+			pos.setFulfilled(it, false, FXDateFactory.now());
 			itemPanes.put(it, new HBox());
 			pos.startEditing(it);
 			edit_row = current.numKids() - 1;
@@ -262,14 +262,14 @@ public class FxView {
 		check.setOnAction(a -> {
 			finishEditing();
 			for (Item k: selected)
-				pos.setFulfilled(k, false);
+				pos.setFulfilled(k, false, FXDateFactory.now());
 			setup();
 
 		});
 		uncheck.setOnAction(a -> {
 			finishEditing();
 			for (Item k: selected)
-				pos.setFulfilled(k, true);
+				pos.setFulfilled(k, true, FXDateFactory.now());
 			setup();
 		});
 
@@ -481,7 +481,7 @@ public class FxView {
 
 	private void addHandlers(final CheckBox cb, Button down, final Item k) {
 		assert k != null;
-		cb.setOnAction(e -> k.setFulfilled(!cb.isSelected()));
+		cb.setOnAction(e -> k.setFulfilled(!cb.isSelected(), FXDateFactory.now()));
 		if (down != null) down.setOnAction(e -> {
 			finishEditing();
 			pos.moveDownTo(k);

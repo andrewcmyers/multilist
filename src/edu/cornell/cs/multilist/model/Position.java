@@ -202,8 +202,8 @@ public class Position extends Observable {
 		current.setNote(text);
 		notifyChanged();
 	}
-	public void setFulfilled(Item it, boolean b) {
-		it.setFulfilled(b);
+	public void setFulfilled(Item it, boolean b, ItemDate now) {
+		it.setFulfilled(b, now);
 		notifyChanged();		
 	}
 	private void addKid(Item k) {

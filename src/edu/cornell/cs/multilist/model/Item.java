@@ -139,10 +139,9 @@ public class Item implements Iterable<Item>, Serializable {
 		return kids.size();
 	}
 
-	public void setFulfilled(boolean f) {
+	public void setFulfilled(boolean f, ItemDate now) {
 		if (isRoot()) return;
 		if (fulfilled == f) return;
-		ItemDate now = FXDateFactory.now();
 		if (!f && due_date != null && due_date.isBefore(now)) {
 			due_date = now;
 			boolean bumped = false;
@@ -158,11 +157,11 @@ public class Item implements Iterable<Item>, Serializable {
 		outer: for (Item p : parents) {
 			for (Item k : p) {
 				if (!k.fulfilled) {
-					p.setFulfilled(false);
+					p.setFulfilled(false, now);
 					continue outer;
 				}
 			}
-			p.setFulfilled(true);
+			p.setFulfilled(true, now);
 		}
 	}
 	
