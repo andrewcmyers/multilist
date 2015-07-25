@@ -14,6 +14,7 @@ import edu.cornell.cs.multilist.model.Item;
 import edu.cornell.cs.multilist.model.Model;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -37,11 +38,8 @@ public class JavaFX extends Application {
 
 	public void start(Stage stage) {
 		stage.setTitle("MultiList");
-		Pane p = new VBox();
-		Scene sc = new Scene(p);
-		stage.setScene(sc);
-		sc.getStylesheets().add("style.css");
-		
+
+
 		
 		if (filename == null) {
 			Item root = new Item();
@@ -80,7 +78,14 @@ public class JavaFX extends Application {
 			}
 		}
 
-		p.getChildren().add(new FxView(model, stage, new Save()).box);
+		Pane p = new FxView(model, stage, new Save()).box;
+		
+		ScrollPane sv = new ScrollPane(p);
+		sv.setFitToWidth(true);
+		Scene sc = new Scene(sv);
+		sc.getStylesheets().add("style.css");
+		stage.setScene(sc);
+		
 		stage.sizeToScene();
 		stage.setHeight(HEIGHT);
 		stage.setWidth(WIDTH);
