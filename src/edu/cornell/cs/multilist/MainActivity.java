@@ -1,31 +1,25 @@
 package edu.cornell.cs.multilist;
 
 import java.io.ByteArrayInputStream;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.io.Serializable;
 import java.io.StreamCorruptedException;
-import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
-import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Base64;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.KeyEvent;
@@ -35,14 +29,16 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.GridLayout.LayoutParams;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
+import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import edu.cornell.cs.multilist.model.AndroidDateFactory;
@@ -51,6 +47,7 @@ import edu.cornell.cs.multilist.model.Item.Warning;
 import edu.cornell.cs.multilist.model.ItemDate;
 import edu.cornell.cs.multilist.model.Model;
 import edu.cornell.cs.multilist.model.Position;
+import edu.cornell.cs.multilist.model.SortOrder;
 
 public class MainActivity extends Activity {
 
@@ -60,8 +57,9 @@ public class MainActivity extends Activity {
 	Position pos;
 	int edit_row; // which row of the grid is being edited.
 	boolean unsaved_update;
-	Set<Item> selected = new HashSet<Item>();
+//	Set<Item> selected = new HashSet<Item>();
 
+	ScrollView outer;
 	LinearLayout box;
 	GridLayout grid;
 	Map<Item, ViewGroup> itemPanes;
@@ -76,7 +74,7 @@ public class MainActivity extends Activity {
 	static final String PERSISTENT_STATE_KEY = "MultiList";
 	static final String ENCODING_CHARSET = "ISO-8859-1";
 	
-	static final int selectedColor = Color.argb(255, 0, 255, 255);
+	static final int selectedColor = Color.argb(255, 155, 147, 100);
 	
 // Unconverted JavaFX stuff:;
 //	Button select_menu;
@@ -108,23 +106,14 @@ public class MainActivity extends Activity {
 				model = new Model(dummy);
 				int where = 0;
 				try {
-//					System.err.println("Found a String of " +
-//							val.length() + " chars");
-//					System.err.println("string: " + val);
+//					System.err.println("read string: " + val);
 					byte[] bytes = ByteEncoder.decode(val);
-//					System.err.println("read = " + bytes.length + " bytes");
+//					System.err.println(" -> " + bytes.length + " bytes");
 //					System.err.println("hash = " + md5(bytes));
-					where = 1;
 					ObjectInputStream os = new ObjectInputStream(
 							new ByteArrayInputStream(bytes));
-					where = 2;
-//					System.err.println("calling readObject..." + bytes);
 					model = (Model) os.readObject();
-					where = 3;
-					
-//					System.err.println("completed");
 					os.close();
-				
 				} catch (StreamCorruptedException e) {
 					dummy.setNote("Stream corrupted recovering state: " + e.getMessage());
 				} catch (IOException e) {
@@ -146,13 +135,13 @@ public class MainActivity extends Activity {
 			model = new Model(root);
 		}
 		
-		ScrollView sv = new ScrollView(this);
+		outer = new ScrollView(this);
 		box = new LinearLayout(this);
 		box.setOrientation(LinearLayout.VERTICAL);
-		sv.addView(box);
+		outer.addView(box);
 	
 		grid = new GridLayout(this);
-		setContentView(sv);
+		setContentView(outer);
 		pos = new Position(model);
 
 		setup();
@@ -196,7 +185,7 @@ public class MainActivity extends Activity {
 	
 	private void setup() {
 		box.removeAllViews();
-		selected.clear();
+		
 		itemPanes = new HashMap<Item, ViewGroup>();
 		items = new HashMap<View, Item>();
 		vert_pos = new HashMap<Item, Integer>();
@@ -206,25 +195,94 @@ public class MainActivity extends Activity {
 		if (!pos.current().isFulfilled())
 			box.addView(setup_due_date());
 		box.addView(setup_notes());
-//		LinearLayout global_menus = new LinearLayout(this);
-//
-//		add(global_menus, setup_selection_menu(), setup_filtering_menu());
-//		add(box, global_menus);
-//		setup_copy_buffer();
+		if (pos.isCopying())
+			box.addView(setup_copy_buffer());
 	}
 
-	private void setup_copy_buffer() {
-		// TODO Auto-generated method stub
+	private View setup_copy_buffer() {
+		assert pos.isCopying();
+		
+		TextView s = new TextView(this);
+		s.setText("selected: ");
+		s.setTextColor(Color.WHITE);
+		TextView t = new TextView(this);
+		t.setText(pos.copybufferDesc());
+		t.setTextColor(Color.WHITE);
+		
+		LinearLayout row = new LinearLayout(this);
+		row.setBackgroundColor(selectedColor);
+		add(row, s, t);
+		Button b = new Button(this);
+		
+//		b.setImageBitmap(bm);
+		b.setText("≡");
+		b.setBackgroundColor(Color.TRANSPARENT);
+		b.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				PopupMenu m = new PopupMenu(MainActivity.this, v);
+				m.getMenu().add("clear");
+				m.getMenu().add("check");
+				m.getMenu().add("uncheck");
+				m.getMenu().add("paste");
+				m.getMenu().add("remove");
+				m.show();
+				m.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+					@Override
+					public boolean onMenuItemClick(MenuItem item) {
+						String it = item.getTitle().toString();
+						return do_selection_op(it);					
+					}
+				});
+			}
+		});
+		add(row, b);
+//		registerForContextMenu(row);
+	
+		
+		t.setPadding(5, 5, 5, 5);
+		row.setPadding(0,  10,  0,  0);
+		return row;
 	}
-
-	private View setup_selection_menu() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	private View setup_filtering_menu() {
-		// TODO Auto-generated method stub
-		return null;
+	
+	private boolean do_selection_op(String it) {
+		if (it.equals("clear")) {
+			finishEditing();
+			pos.stopCopying();
+			setup();
+			return true;
+		} else if (it.equals("paste")) {
+			try {
+				pos.doCopy();
+				setup();
+			} catch (Warning w) {
+				warn(w.getMessage());
+			}
+			return true;
+		} else if (it.equals("remove")) {
+			try {
+				finishEditing();
+				for (Item k : pos.copyBuffer())
+					pos.removeKid(k);
+				setup();
+			} catch (Warning w) {
+				warn(w.getMessage());
+			}
+			return true;
+		} else if (it.equals("check")) {
+			finishEditing();
+			for (Item k: pos.copyBuffer())
+				pos.setFulfilled(k, false, AndroidDateFactory.now());
+			setup();
+			return true;
+		} else if (it.equals("uncheck")) {
+			finishEditing();
+			for (Item k: pos.copyBuffer())
+				pos.setFulfilled(k, true, AndroidDateFactory.now());
+			setup();
+			return true;
+		}
+		return false;
 	}
 
 	private View setup_notes() {
@@ -293,16 +351,20 @@ public class MainActivity extends Activity {
 		b.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				finishEditing();
-				Item it = pos.createKid();
-				pos.setFulfilled(it, false, AndroidDateFactory.now());
-				itemPanes.put(it, new LinearLayout(MainActivity.this));
-				pos.startEditing(it);
-				edit_row = current.numKids() - 1;
-				setup();	
+				newKid();
 			}
 		});
 		grid.addView(b, gridCoord(i, 2));
+	}
+
+	protected void newKid() {
+		finishEditing();
+		Item it = pos.createKid();
+		pos.setFulfilled(it, false, AndroidDateFactory.now());
+		itemPanes.put(it, new LinearLayout(MainActivity.this));
+		pos.startEditing(it);
+		edit_row = pos.current().numKids() - 1;
+		setup();
 	}
 
 	private void finishEditing() {
@@ -328,7 +390,11 @@ public class MainActivity extends Activity {
 		ViewGroup checkbox_area = new LinearLayout(this);
 		checkbox_area.setMinimumWidth(180);
 		add(row, checkbox_area);
-		items.put(checkbox_area,  k);
+		
+		if (pos.isCopying() && pos.copyBuffer().contains(k)) {
+			row.setBackgroundColor(selectedColor);
+		}
+		
 		if (edited) {
 			final TextView tf = new EditText(this);
 			tf.setLines(1);
@@ -352,8 +418,6 @@ public class MainActivity extends Activity {
 			cb = new CheckBox(this);
 			cb.setText(k.name());
 			add(checkbox_area, cb);
-            if (selected.contains(k))
-            	row.setBackgroundColor(selectedColor);
 		}
 		cb.setChecked(!k.isFulfilled());
 
@@ -364,83 +428,70 @@ public class MainActivity extends Activity {
 		down.setText("▶");
 		add(buttons, down);
 		addHandlers(cb, down, k);
+		items.put(cb,  k);
+		items.put(checkbox_area, k);
+		items.put(row,  k);
 
 		registerForContextMenu(checkbox_area);
+		registerForContextMenu(cb);
+		registerForContextMenu(row);
 	}
 	@Override
 	public
 	void onCreateContextMenu(ContextMenu c, View v, ContextMenuInfo inf) {
-		System.err.println("cfeating ctxt menu");
+		Item k = items.get(v);
+		if (k == context_item) return; // avoid duplicating items
 		c.add("edit");
-		c.add("copy");
+		c.add("select");
 		c.add("remove");
-		context_view = v;
+	
+		context_item = k;
 	}
-	View context_view;
+	Item context_item;
 	
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
-		//This hook is called whenever an item in a context menu is selected.
-		String op = (String) item.getTitle();
-		System.err.println("op = " + op);
-		Item k = items.get(context_view);
+		String op = item.getTitle().toString();
+		Item k = context_item;
 		if (op.equals("edit")) {
-			finishEditing();
-			System.err.println("edited item is " + k);
-			pos.startEditing(k);
-			System.err.println("at vert pos " + vert_pos.get(k));
-			setup_row(k, vert_pos.get(k));
+			editKid(k);
+		} else if (op.equals("select")) {
+			copyKid(k);
 		} else if (op.equals("remove")) {
-			finishEditing();
-			try {
-				pos.removeKid(k);
-				setup();
-			} catch (Warning w) {
-				warn(w.getMessage());
-			}
+			removeKid(k);
 		}
 		return true;
 	}
 
-//	final Button menu;
-//	final ContextMenu cmenu = new ContextMenu();
-//	MenuItem remove = new MenuItem("remove");
-//	MenuItem edit = new MenuItem("edit");
-//	MenuItem copy = new MenuItem("copy");
-//	cmenu.getItems().addAll(edit, copy, remove);
-//	add(buttons, menu = new Button("☰"));
-//
-//	menu.setOnMousePressed(me ->
-//	cmenu.show(cb, me.getScreenX(), me.getScreenY()));
+	private void editKid(Item k) {
+		finishEditing();
+		pos.startEditing(k);
+		setup_row(k, vert_pos.get(k));
+	}
 
-//	edit.setOnAction(e -> {
-//		if (pos.isEditing(k)) return; // already editing this name!
-//		finishEditing();
-//		pos.startEditing(k);
-//		setupRow(k, i);}
-//			);
-//	cb.setOnMouseClicked(me -> {
-//		if (me.isMetaDown()) {
-//			if (selected.contains(k)) {
-//				row.getStyleClass().remove("selected");
-//				row.getStyleClass().add("unselected");
-//
-//				row.setStyle(" -fx-background-color: transparent"); // should not be necessary
-//				selected.remove(k);
-//			} else {
-//				row.getStyleClass().remove("unselected");
-//				row.getStyleClass().add("selected");
-//				row.setStyle("");
-//				selected.add(k);
-//			}
-//		}}
-//			);
-//	copy.setOnAction(a -> {
-//		finishEditing();
-//		pos.extendCopy(k);
-//		setup();
-//	});
-//}
+	private void removeKid(Item k) {
+		finishEditing();
+		try {
+			pos.removeKid(k);
+			setup();
+		} catch (Warning w) {
+			warn(w.getMessage());
+		}
+	}
+	
+	private void copyKid(Item k) {
+		finishEditing();
+		if (pos.copyBuffer().contains(k))
+			pos.copyBuffer().remove(k);
+		else
+			pos.extendCopy(k);
+		setup();
+	}
+
+	@Override
+	public void onContextMenuClosed(Menu m) {
+		context_item = null;
+	}
 	
 	private void warn(String message) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -485,6 +536,11 @@ public class MainActivity extends Activity {
 			up.setText("▲");
 			TextView name = new TextView(this);
 			name.setText(pos.topline(current));
+			name.setPadding(5, 5, 5, 5);
+			name.setTextSize(20);
+			name.setTextColor(Color.WHITE);
+			if (pos.copyBuffer().contains(current))
+				name.setBackgroundColor(selectedColor);
 			add(toprow, up, name);
 			up.setOnClickListener(new OnClickListener() {
 				@Override
@@ -497,11 +553,20 @@ public class MainActivity extends Activity {
 		}
 		return toprow;
 	}
-
+	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.main, menu);
+//		getMenuInflater().inflate(R.menu.main, menu);
+		menu.add("new");
+		menu.add("hide/show completed");
+		menu.add("sort by name");
+		menu.add("sort by date");		
+		menu.add("select all");
+//		menu.add("check all"); // these go to the selection menu
+//		menu.add("uncheck all");
+//		menu.add("clear selection");
+		
 		return true;
 	}
 
@@ -510,10 +575,49 @@ public class MainActivity extends Activity {
 		// Handle action bar item clicks here. The action bar will
 		// automatically handle clicks on the Home/Up button, so long
 		// as you specify a parent activity in AndroidManifest.xml.
-		int id = item.getItemId();
-		if (id == R.id.action_settings) {
-			return true;
+//		int id = item.getItemId();
+//		if (id == R.id.action_settings) {
+//			return true;
+//		}
+		String op = item.getTitle().toString();
+		if (op.equals("new")) {
+			newKid();
+		} else if (op.equals("hide/show completed")) {
+			toggleShowCompleted();
+		} else if (op.equals("sort by name")) {
+			sort_by_name();
+		} else if (op.equals("sort by date")) {
+			sort_by_date();
+		} else if (op.equals("select all")) {
+			select_all();
 		}
+		
 		return super.onOptionsItemSelected(item);
+	}
+
+	private void select_all() {
+		finishEditing();
+		for (Item k : pos.current()) {
+			pos.extendCopy(k);
+		}
+		setup();
+	}
+
+	private void sort_by_date() {
+		finishEditing();
+		pos.sortKids(SortOrder.DUE_DATE);
+		setup();
+	}
+
+	private void sort_by_name() {
+		finishEditing();
+		pos.sortKids(SortOrder.ALPHABETIC);
+		setup();
+	}
+
+	private void toggleShowCompleted() {
+		finishEditing();
+		pos.toggleShowCompleted();
+		setup();
 	}
 }
