@@ -20,8 +20,7 @@ public class Position extends Observable {
 	public Model model() { return model; }
 	private boolean editing = false;
 	private Item edit_item; // member of current if editing is true.
-	private boolean copying = false;
-	private Set<Item> copy_buffer;
+	private Set<Item> copy_buffer = new HashSet<Item>();
 	static final DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.LONG);
 	
 	public boolean invariant() {
@@ -33,9 +32,6 @@ public class Position extends Observable {
 		}
 		if (isEditing()) {
 			assert edit_item != null && current.hasKid(edit_item);
-		}
-		if (copying) {
-			assert copy_buffer != null && copy_buffer.size() > 0;
 		}
 		return true;
 	}
@@ -76,15 +72,18 @@ public class Position extends Observable {
 	/** Add k to the current copy selection. Requires: not editing. */
 	public void extendCopy(Item k) {
 		assert !isEditing();
-		if (!copying) {
-			copy_buffer = new HashSet<Item>();
-			copying = true;
-		}
 		copy_buffer.add(k);
+	}
+	public String copybufferDesc() {
+		StringBuilder b = new StringBuilder();
+		b.append(copy_buffer.size());
+		if (copy_buffer.size() == 1) b.append(" item");
+		else b.append(" items");
+		return b.toString();
 	}
 	/** return error message if some part of the copy failed. */
 	public void doCopy() throws Warning {
-		if (!copying) throw new Warning("Nothing ready to copy.");
+		if (!isCopying()) throw new Warning("Nothing ready to copy.");
 		for (Item k : copy_buffer) {
 			if (reachable(k, current)) throw new Warning(k.name() + " cannot be under itself.");
 		}
@@ -185,7 +184,6 @@ public class Position extends Observable {
 	/** A description of the current item and its parents. */
 	public String topline(Item k) {
 		StringBuilder b = new StringBuilder();
-		b.append("   ");
 		b.append(k.name());
 		boolean first = true;
 		for (Item i : k.parents()) {
@@ -211,6 +209,8 @@ public class Position extends Observable {
 		notifyChanged();		
 	}
 	public void removeKid(Item k) throws Item.Warning {
+		if (!current.hasKid(k))
+			throw new Item.Warning("Can't remove from another view");
 		current.removeKid(k);
 		notifyChanged();		
 	}
@@ -236,7 +236,7 @@ public class Position extends Observable {
 		return date.toString();
 	}
 	public boolean isCopying() {
-		return copying;
+		return copy_buffer.size() > 0;
 	}
 //	public void setCopying(boolean copying) {
 //		this.copying = copying;
@@ -245,6 +245,6 @@ public class Position extends Observable {
 		return copy_buffer;
 	}
 	public void stopCopying() {
-		copying = false;
+		copy_buffer.clear();
 	}
 }
