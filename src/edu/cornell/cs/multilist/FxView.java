@@ -2,7 +2,6 @@ package edu.cornell.cs.multilist;
 
 import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
@@ -47,7 +46,7 @@ public class FxView {
 	Position pos;
 	int edit_row; // which row of the grid is being edited.
 	boolean unsaved_update;
-	Set<Item> selected = new HashSet<>();
+//	Set<Item> selected = new HashSet<>(); // two selection mechs is overkill
 
 	VBox box;
 	GridPane grid;
@@ -103,7 +102,7 @@ public class FxView {
 	void setup() {
 		final ObservableList<Node> c = box.getChildren();
 		c.clear();
-		selected.clear();
+//		selected.clear();
 		c.add(setup_top_line());
 		setup_item_rows();
 		c.add(grid);
@@ -216,12 +215,11 @@ public class FxView {
 	private Node setup_selection_menu() {
 		final ContextMenu selection_menu = new ContextMenu();
 		MenuItem remove = new MenuItem("remove selected");
-		MenuItem copy = new MenuItem("copy selected");
 		MenuItem check = new MenuItem("check selected");
 		MenuItem uncheck = new MenuItem("uncheck selected");
 		MenuItem clear = new MenuItem("clear selection");
 		MenuItem select_all = new MenuItem("select all");
-		selection_menu.getItems().addAll(select_all, check, uncheck, copy, remove, clear);
+		selection_menu.getItems().addAll(select_all, check, uncheck, remove, clear);
 		select_menu = new Button("☰");
 
 		select_menu.getStyleClass().add("select_menu");
@@ -232,7 +230,7 @@ public class FxView {
 		remove.setOnAction(a -> {
 			try {
 				finishEditing();
-				for (Item k : selected)
+				for (Item k : pos.copyBuffer())
 					pos.removeKid(k);
 				setup();
 			} catch (Warning w) {
@@ -240,7 +238,7 @@ public class FxView {
 			}
 		});
 		clear.setOnAction(a-> {
-			selected.clear();
+//			selected.clear();
 			pos.stopCopying();
 			setup();				
 		});
@@ -249,26 +247,26 @@ public class FxView {
 			int i = 0;
 			for (Item k : pos.items()) {
 				if (!itemPanes.containsKey(k)) continue;
-				selected.add(k);
+				pos.extendCopy(k);
 				setupRow(k, i++);
 			}				
 		});
-		copy.setOnAction(a -> {
-			finishEditing();
-			for (Item k : selected) {
-				pos.extendCopy(k);
-			}
-			setup();
-		});
+//		copy.setOnAction(a -> {
+//			finishEditing();
+//			for (Item k : selected) {
+//				pos.extendCopy(k);
+//			}
+//			setup();
+//		});
 		check.setOnAction(a -> {
 			finishEditing();
-			for (Item k: selected)
+			for (Item k: pos.copyBuffer())
 				pos.setFulfilled(k, false, FXDateFactory.now());
 			setup();
 		});
 		uncheck.setOnAction(a -> {
 			finishEditing();
-			for (Item k: selected)
+			for (Item k: pos.copyBuffer())
 				pos.setFulfilled(k, true, FXDateFactory.now());
 			setup();
 		});
@@ -340,7 +338,7 @@ public class FxView {
 			tf.requestFocus();
 		} else {	
 			add(checkbox_area, cb = new CheckBox(k.name()));
-			if (selected.contains(k)) row.getStyleClass().add("selected");
+			if (pos.copyBuffer().contains(k)) row.getStyleClass().add("selected");
 		}
 		Region spacer = new Region();
 		add(checkbox_area, spacer);
@@ -358,8 +356,8 @@ public class FxView {
 		final ContextMenu cmenu = new ContextMenu();
 		MenuItem remove = new MenuItem("remove");
 		MenuItem edit = new MenuItem("edit");
-		MenuItem copy = new MenuItem("copy");
-		cmenu.getItems().addAll(edit, copy, remove);
+		MenuItem select = new MenuItem("select");
+		cmenu.getItems().addAll(edit, select, remove);
 		cmenu.getStyleClass().add("item_menu");
 		add(buttons, menu = new Button("☰"));
 		menu.getStyleClass().add("item_menu_button");
@@ -382,33 +380,27 @@ public class FxView {
 				);
 		row.setOnMouseClicked(me -> {
 			if (me.isMetaDown()) {
-				if (selected.contains(k)) {
+				finishEditing();
+				if (pos.copyBuffer().contains(k)) {
 					row.getStyleClass().remove("selected");
 					row.getStyleClass().add("unselected");
-
-//					row.setStyle(" -fx-background-color: transparent"); // needed in JavaFX 2.2!?
-					selected.remove(k);
+					row.setStyle(" -fx-background-color: transparent"); // needed in JavaFX 2.2!?
+					pos.copyBuffer().remove(k);
+					setup();
 				} else {
 					row.getStyleClass().remove("unselected");
 					row.getStyleClass().add("selected");
-//					row.setStyle(""); // needed in JavaFX 2.2!?
-					selected.add(k);
+					row.setStyle(""); // needed in JavaFX 2.2!?
+					pos.copyBuffer().add(k);
+					setup();
 				}
 			}}
 				);
-		copy.setOnAction(a -> {
+		select.setOnAction(a -> {
 			finishEditing();
 			pos.extendCopy(k);
 			setup();
 		});
-	}
-
-	String item_desc(Set<Item> s) {
-		StringBuilder b = new StringBuilder();
-		b.append(s.size());
-		if (s.size() == 1) b.append(" item");
-		else b.append(" items");
-		return b.toString();
 	}
 	
 	static Pane add(Pane p, Node n) {
@@ -441,7 +433,7 @@ public class FxView {
 		r.setMinHeight(15);
 		copy_buffer = new VBox();
 		c.add(copy_buffer);
-		Text t = new Text(item_desc(pos.copyBuffer()));
+		Text t = new Text(pos.copybufferDesc());
 		
 		HBox h = new HBox();
 		VBox r2 = new VBox();
