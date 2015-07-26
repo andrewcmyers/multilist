@@ -321,7 +321,7 @@ public class FxView {
 		final CheckBox cb;
 		HBox checkbox_area = new HBox();
 		checkbox_area.getStyleClass().add("checkbox");
-		checkbox_area.setMinWidth(180);
+		checkbox_area.setMinWidth(250);
 	
 		add(row, checkbox_area);
 
@@ -473,7 +473,11 @@ public class FxView {
 
 	private void addHandlers(final CheckBox cb, Button down, final Item k) {
 		assert k != null;
-		cb.setOnAction(e -> k.setFulfilled(!cb.isSelected(), FXDateFactory.now()));
+		cb.setOnAction(e -> {
+			finishEditing();
+			k.setFulfilled(!cb.isSelected(), FXDateFactory.now());
+			setup();
+		});
 		if (down != null) down.setOnAction(e -> {
 			finishEditing();
 			pos.moveDownTo(k);
