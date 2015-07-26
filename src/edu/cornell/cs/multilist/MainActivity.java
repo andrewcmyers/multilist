@@ -44,6 +44,7 @@ import android.widget.TextView;
 import edu.cornell.cs.multilist.model.AndroidDateFactory;
 import edu.cornell.cs.multilist.model.Item;
 import edu.cornell.cs.multilist.model.Item.Warning;
+import edu.cornell.cs.multilist.model.Position.DateAnalysis;
 import edu.cornell.cs.multilist.model.ItemDate;
 import edu.cornell.cs.multilist.model.Model;
 import edu.cornell.cs.multilist.model.Position;
@@ -278,6 +279,7 @@ public class MainActivity extends Activity {
 	private View setup_notes() {
 		notes = new EditText(this);
 		notes.setText(pos.current().note());
+		notes.clearFocus();
 		return notes;
 	}
 	
@@ -290,8 +292,11 @@ public class MainActivity extends Activity {
 	}
 
 	private View setup_due_date() {
+		final LinearLayout result = new LinearLayout(this);
+		result.setOrientation(LinearLayout.VERTICAL);
 		final TextView d = new TextView(this);
 		set_due_date(d);
+		add(result, d);
 		final Calendar cal = Calendar.getInstance();
 		if (pos.current().dueDate() != Item.NO_DATE) {
 			cal.setTimeInMillis(pos.current().dueDate().getTimeMillis());
@@ -318,7 +323,36 @@ public class MainActivity extends Activity {
 				dia.show();
 			}
 		});
-		return d;
+		if (pos.current().numKids() > 0) {
+			DateAnalysis r = pos.analyzeDates();
+			if (r.first_k != null) {
+				LinearLayout h2 = new LinearLayout(this),
+						h3 = new LinearLayout(this);
+				TextView t2 = new TextView(this);
+				t2.setText("First due: " + r.first_k.name() + ", ");
+				TextView ds1 = new TextView(this);
+				ds1.setText(r.first.toString());
+				add(h2, t2, ds1);
+				add(result, h2);
+				ItemDate now = AndroidDateFactory.now();
+				if (r.first.isBefore(now))
+					ds1.setTextColor(Color.RED);
+				if (pos.current().dueDate() != null && r.first.isAfter(pos.current().dueDate()))
+					ds1.setTextColor(Color.RED);
+
+				if (pos.current().dueDate() != null && r.first_k != r.last_k) {
+					TextView t3 = new TextView(this);
+					t3.setText("Last due: "+ r.last_k.name() + ", ");
+					TextView ds3 = new TextView(this);
+					ds3.setText(r.last.toString());
+					add(h3, t3, ds3);
+					add(result, h3);
+					if (r.last.isAfter(pos.current().dueDate()))
+						ds3.setTextColor(Color.RED);
+				}
+			}
+		}
+		return result;
 	}
 
 	private void setup_item_rows() {
