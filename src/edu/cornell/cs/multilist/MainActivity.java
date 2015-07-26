@@ -57,7 +57,6 @@ public class MainActivity extends Activity {
 	Position pos;
 	int edit_row; // which row of the grid is being edited.
 	boolean unsaved_update;
-//	Set<Item> selected = new HashSet<Item>();
 
 	ScrollView outer;
 	LinearLayout box;
@@ -75,12 +74,6 @@ public class MainActivity extends Activity {
 	static final String ENCODING_CHARSET = "ISO-8859-1";
 	
 	static final int selectedColor = Color.argb(255, 155, 147, 100);
-	
-// Unconverted JavaFX stuff:;
-//	Button select_menu;
-//	Pane copy_buffer;
-//	private Stage stage;
-//	Saver saver;
 	
 	int md5(byte[] b) {
 		MessageDigest md = null;
@@ -171,7 +164,6 @@ public class MainActivity extends Activity {
 //			System.err.println("Generated " + bytes.length + " bytes");
 //			System.err.println("hash = " + md5(bytes));
 			
-			
 			String enc = ByteEncoder.encode(bytes);
 //			System.err.println("  = " + enc.length() + " chars");
 //			System.err.println("output: " + enc);
@@ -213,8 +205,6 @@ public class MainActivity extends Activity {
 		row.setBackgroundColor(selectedColor);
 		add(row, s, t);
 		Button b = new Button(this);
-		
-//		b.setImageBitmap(bm);
 		b.setText("≡");
 		b.setBackgroundColor(Color.TRANSPARENT);
 		b.setOnClickListener(new OnClickListener() {
@@ -411,6 +401,7 @@ public class MainActivity extends Activity {
 					return false;
 				}
 			});
+/* bring up soft keyboard -- why doesn't this work? */
 //			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 //			imm.showSoftInput(tf, InputMethodManager.SHOW_IMPLICIT);
 			tf.requestFocus();
@@ -509,6 +500,10 @@ public class MainActivity extends Activity {
 			@Override
 			public void onClick(View v) {
 				k.setFulfilled(!cb.isChecked(), AndroidDateFactory.now());
+				if (!pos.showCompleted()) {
+					finishEditing();
+					setup();
+				}
 			}
 		});
 		down.setOnClickListener(new OnClickListener() {
@@ -556,29 +551,16 @@ public class MainActivity extends Activity {
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-//		getMenuInflater().inflate(R.menu.main, menu);
 		menu.add("new");
 		menu.add("hide/show completed");
 		menu.add("sort by name");
 		menu.add("sort by date");		
 		menu.add("select all");
-//		menu.add("check all"); // these go to the selection menu
-//		menu.add("uncheck all");
-//		menu.add("clear selection");
-		
 		return true;
 	}
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
-//		int id = item.getItemId();
-//		if (id == R.id.action_settings) {
-//			return true;
-//		}
 		String op = item.getTitle().toString();
 		if (op.equals("new")) {
 			newKid();
@@ -591,15 +573,13 @@ public class MainActivity extends Activity {
 		} else if (op.equals("select all")) {
 			select_all();
 		}
-		
 		return super.onOptionsItemSelected(item);
 	}
 
 	private void select_all() {
 		finishEditing();
-		for (Item k : pos.current()) {
+		for (Item k : pos.current())
 			pos.extendCopy(k);
-		}
 		setup();
 	}
 
