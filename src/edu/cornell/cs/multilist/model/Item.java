@@ -146,7 +146,8 @@ public class Item implements Iterable<Item>, Serializable {
 			due_date = now;
 			boolean bumped = false;
 			for (Item k : kids) {
-				if (due_date.isBefore(k.due_date)) {
+				if (k.due_date != null &&
+						due_date.isBefore(k.due_date)) {
 					due_date = k.due_date;
 					bumped = true;
 				}
