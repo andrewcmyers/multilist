@@ -29,6 +29,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
 import android.view.ViewGroup;
+import android.view.ViewGroup.MarginLayoutParams;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
@@ -40,6 +41,7 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
 import android.widget.ScrollView;
+import android.widget.Space;
 import android.widget.TextView;
 import edu.cornell.cs.multilist.model.AndroidDateFactory;
 import edu.cornell.cs.multilist.model.Item;
@@ -289,14 +291,26 @@ public class MainActivity extends Activity {
 				  "none"
 				: pos.dateString(id);
 		d.setText("Due: " + ds);
+		
 	}
 
 	private View setup_due_date() {
 		final LinearLayout result = new LinearLayout(this);
 		result.setOrientation(LinearLayout.VERTICAL);
+		LinearLayout h = new LinearLayout(this);
+		Button clear_date = new Button(this);
+		clear_date.setText("clear");
+		clear_date.setTextSize(12);
+
+//		LayoutParams params = new LayoutParams();
+//        params.setMargins(0, 0, 0, 20);
+//		clear_date.setLayoutParams(params);
 		final TextView d = new TextView(this);
 		set_due_date(d);
-		add(result, d);
+		Space sp = new Space(this);
+		sp.setMinimumWidth(50);
+		add(h, d, sp, clear_date);
+		add(result, h);
 		final Calendar cal = Calendar.getInstance();
 		if (pos.current().dueDate() != Item.NO_DATE) {
 			cal.setTimeInMillis(pos.current().dueDate().getTimeMillis());
@@ -352,6 +366,12 @@ public class MainActivity extends Activity {
 				}
 			}
 		}
+		clear_date.setOnClickListener(new OnClickListener() {
+			@Override public void onClick(View v) {
+				pos.current().setDueDate(null);
+				set_due_date(d);
+			}
+		});
 		return result;
 	}
 
