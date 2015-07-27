@@ -39,7 +39,7 @@ public class MilliDate implements ItemDate, Serializable {
 	}
 
 	public String toString() {
-		SimpleDateFormat sdf = new SimpleDateFormat("MMMM dd");
+		SimpleDateFormat sdf = new SimpleDateFormat("MMMM d");
 		return sdf.format(new Date(millis));
 	}
 	@Override
