@@ -22,10 +22,7 @@
 }
 .item_menu_button {
 	-fx-color: yellow;
-}
-
-.checkbox {
-   -fx-pref-width: 300;
+	-fx-margin-right: 20;
 }
 
 .copied {
