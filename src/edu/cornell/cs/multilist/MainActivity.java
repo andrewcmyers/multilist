@@ -71,6 +71,7 @@ public class MainActivity extends Activity {
 	ViewGroup copy_buffer;
 	TextView edit_text;
 	TextView notes;
+	Button clear_date;
 	
 	static final String APP_STATE_KEY = "state";
 	static final String PERSISTENT_STATE_KEY = "MultiList";
@@ -291,14 +292,17 @@ public class MainActivity extends Activity {
 				  "none"
 				: pos.dateString(id);
 		d.setText("Due: " + ds);
-		
+		if (id == null)
+			clear_date.setVisibility(View.INVISIBLE);
+		else
+			clear_date.setVisibility(View.VISIBLE);
 	}
 
 	private View setup_due_date() {
 		final LinearLayout result = new LinearLayout(this);
 		result.setOrientation(LinearLayout.VERTICAL);
 		LinearLayout h = new LinearLayout(this);
-		Button clear_date = new Button(this);
+		clear_date = new Button(this);
 		clear_date.setText("clear");
 		clear_date.setTextSize(12);
 

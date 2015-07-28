@@ -86,7 +86,6 @@ public class JavaFX extends Application {
 		sc.getStylesheets().add("style.css");
 		stage.setScene(sc);
 		
-		stage.sizeToScene();
 		stage.setHeight(HEIGHT);
 		stage.setWidth(WIDTH);
 		stage.show();

@@ -30,6 +30,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -37,6 +38,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -165,6 +167,7 @@ public class FxView {
 	private Node setup_notes() {
 		final TextArea t = new TextArea(pos.current().note());
 		t.getStyleClass().add("notes");	
+		t.setWrapText(true);
 
 		t.setOnKeyTyped(e -> pos.setNote(t.getText()));
 		t.setOnMouseExited(e -> pos.setNote(t.getText()));
@@ -176,7 +179,8 @@ public class FxView {
 		HBox toprow = new HBox();
 		if (!current.isRoot()) {
 			Button up;
-			add(toprow, up = new Button("▲"), new Text(pos.topline(current)));
+			add(toprow, up = new Button("▲"),
+					new TextFlow(new Text(pos.topline(current))));
 			up.setOnAction(a -> {
 				finishEditing();
 				pos.moveUp();
@@ -189,6 +193,9 @@ public class FxView {
 	/** Set 'grid' to refer to the pane containing the item checklist. */
 	private void setup_item_rows() {
 		grid = new GridPane();
+		ColumnConstraints cc = new ColumnConstraints();
+		grid.getColumnConstraints().add(cc);
+		cc.fillWidthProperty().setValue(true);
 		final Item current = pos.current();
 		int i = 0;
 
@@ -197,7 +204,7 @@ public class FxView {
 			Pane h = new HBox();
 			itemPanes.put(k, h);
 			grid.add(h, 0, i);
-			setupRow(k, i);
+			setup_row(k, i);
 			i++;
 		}
 		Button b = new Button("+");
@@ -248,7 +255,7 @@ public class FxView {
 			for (Item k : pos.items()) {
 				if (!itemPanes.containsKey(k)) continue;
 				pos.extendCopy(k);
-				setupRow(k, i++);
+				setup_row(k, i++);
 			}				
 		});
 //		copy.setOnAction(a -> {
@@ -310,7 +317,7 @@ public class FxView {
 	}
 	
 	/** i is the vertical position at which the item is inserted into the grid. */
-	private void setupRow(final Item k, final int i) {
+	private void setup_row(final Item k, final int i) {
 		final Pane row = itemPanes.get(k);
 		assert row != null;
 		
@@ -331,7 +338,7 @@ public class FxView {
 			add(checkbox_area, cb = new CheckBox(), tf);
 			tf.setOnAction(e -> {
 				pos.finishEditing(tf.getText());
-				setupRow(k, i);
+				setup_row(k, i);
 			});
 			tf.selectAll();
 			tf.end();
@@ -376,7 +383,7 @@ public class FxView {
 			if (pos.isEditing(k)) return; // already editing this name!
 			finishEditing();
 			pos.startEditing(k);
-			setupRow(k, i);}
+			setup_row(k, i);}
 				);
 		row.setOnMouseClicked(me -> {
 			if (me.isMetaDown()) {
@@ -467,7 +474,7 @@ public class FxView {
 	void finishEditing() {
 		if (pos.isEditing()) {
 			pos.finishEditing(edit_text.getValue());
-			setupRow(pos.editItem(), edit_row);				
+			setup_row(pos.editItem(), edit_row);				
 		}
 	}
 
