@@ -16,11 +16,13 @@ import java.util.Map;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.KeyEvent;
@@ -31,6 +33,8 @@ import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
@@ -199,6 +203,16 @@ public class MainActivity extends Activity {
 		box.addView(setup_notes());
 		if (pos.isCopying())
 			box.addView(setup_copy_buffer());
+		/* bring up soft keyboard -- why doesn't this work? */
+		if (pos.isEditing()) {
+			edit_text.requestFocus();
+			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+			imm.showSoftInput(edit_text, InputMethodManager.SHOW_IMPLICIT);
+//			edit_text.setShowSoftInputOnFocus(true);
+
+			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE); 
+			edit_text.requestFocus();
+		}
 	}
 
 	private View setup_copy_buffer() {
@@ -288,6 +302,9 @@ public class MainActivity extends Activity {
 	private View setup_notes() {
 		notes = new EditText(this);
 		notes.setText(pos.current().note());
+		notes.setInputType(
+				  InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
+				| InputType.TYPE_TEXT_FLAG_MULTI_LINE);
 		notes.clearFocus();
 		return notes;
 	}
@@ -453,6 +470,7 @@ public class MainActivity extends Activity {
 			final TextView tf = new EditText(this);
 			tf.setLines(1);
 			tf.setText(k.name());
+			tf.setInputType(InputType.TYPE_TEXT_FLAG_AUTO_CORRECT);
 			edit_text = tf;
 			add(checkbox_area, cb = new CheckBox(this), tf);
 			
@@ -465,10 +483,8 @@ public class MainActivity extends Activity {
 					return false;
 				}
 			});
-/* bring up soft keyboard -- why doesn't this work? */
-//			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-//			imm.showSoftInput(tf, InputMethodManager.SHOW_IMPLICIT);
-			tf.requestFocus();
+
+
 		} else {
 			cb = new CheckBox(this);
 			cb.setText(k.name());
@@ -480,7 +496,7 @@ public class MainActivity extends Activity {
 
 		grid.addView(buttons, gridCoord(i, 2));
 		down = new Button(this);
-		down.setText("▶");
+		down.setText("►");
 		add(buttons, down);
 		addHandlers(cb, down, k);
 		items.put(cb,  k);
