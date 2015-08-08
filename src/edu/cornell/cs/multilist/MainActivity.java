@@ -17,6 +17,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -95,6 +96,22 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		restoreState(savedInstanceState);
+		
+		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+		
+		outer = new ScrollView(this);
+		box = new LinearLayout(this);
+		box.setOrientation(LinearLayout.VERTICAL);
+		outer.addView(box);
+	
+		grid = new GridLayout(this);
+		setContentView(outer);
+		pos = new Position(model);
+
+		setup();
+	}
+	private void restoreState(Bundle savedInstanceState) {
 		if (savedInstanceState == null) {
 			SharedPreferences prefs = getPreferences(MODE_PRIVATE);
 			String val = prefs.getString(PERSISTENT_STATE_KEY, null);
@@ -131,17 +148,6 @@ public class MainActivity extends Activity {
 			root.setNote("Could not recover state from bundle!");
 			model = new Model(root);
 		}
-		
-		outer = new ScrollView(this);
-		box = new LinearLayout(this);
-		box.setOrientation(LinearLayout.VERTICAL);
-		outer.addView(box);
-	
-		grid = new GridLayout(this);
-		setContentView(outer);
-		pos = new Position(model);
-
-		setup();
 	}
 	
 	@Override

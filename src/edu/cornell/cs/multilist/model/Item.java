@@ -188,7 +188,9 @@ public class Item implements Iterable<Item>, Serializable {
 			return new Comparator<Item>() {
 				@Override
 				public int compare(Item o1, Item o2) {
-					return o1.name().compareTo(o2.name());
+					String s1 = o1.name().toLowerCase();
+					String s2 = o2.name().toLowerCase();
+					return s1.compareTo(s2);
 				}
 			};
 		case DUE_DATE:

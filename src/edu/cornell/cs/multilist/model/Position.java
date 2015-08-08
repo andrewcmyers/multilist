@@ -194,6 +194,25 @@ public class Position extends Observable {
 		}
 		return b.toString();
 	}
+	public boolean isEditing() {
+		return editing;
+	}
+	public Item editItem() {
+		return edit_item;
+	}
+	public String dateString(ItemDate date) {
+		return date.toString();
+	}
+	public boolean isCopying() {
+		return copy_buffer.size() > 0;
+	}
+
+	public Set<Item> copyBuffer() {
+		return copy_buffer;
+	}
+	public void stopCopying() {
+		copy_buffer.clear();
+	}
 
 	// Item mutators that notify the model.
 	public void setNote(String text) {
@@ -225,26 +244,5 @@ public class Position extends Observable {
 	public void setDate(ItemDate d) {
 		current.setDueDate(d);
 		notifyChanged();		
-	}
-	public boolean isEditing() {
-		return editing;
-	}
-	public Item editItem() {
-		return edit_item;
-	}
-	public String dateString(ItemDate date) {
-		return date.toString();
-	}
-	public boolean isCopying() {
-		return copy_buffer.size() > 0;
-	}
-//	public void setCopying(boolean copying) {
-//		this.copying = copying;
-//	}
-	public Set<Item> copyBuffer() {
-		return copy_buffer;
-	}
-	public void stopCopying() {
-		copy_buffer.clear();
 	}
 }
