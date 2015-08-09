@@ -2,7 +2,9 @@ package edu.cornell.cs.multilist.model;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Set;
 
@@ -162,12 +164,18 @@ public class Position extends Observable {
 		public Item first_k, last_k;
 		public ItemDate first, last;
 	}
-
-	public DateAnalysis analyzeDates() {
-		DateAnalysis r = new DateAnalysis();
 	
-		if (current.numKids() > 0) {
-			for (Item k : current) {
+	public DateAnalysis analyzeDates(Map<Item, DateAnalysis> cache, Item it) {
+		if (cache.containsKey(it)) return cache.get(it);
+		DateAnalysis r = new DateAnalysis();
+		if (it.numKids() > 0) {
+			for (Item k : it) {
+				DateAnalysis a = analyzeDates(cache, k);
+				if (a.first_k != null &&
+						(r.first == null || a.first_k.dueDate().isBefore(r.first))) {
+					r.first = a.first_k.dueDate();
+					r.first_k = a.first_k;
+				}
 				if (k.dueDate() != null && !k.isFulfilled() && (r.first == null || k.dueDate().isBefore(r.first))) {
 					r.first = k.dueDate();
 					r.first_k = k;
@@ -178,7 +186,12 @@ public class Position extends Observable {
 				}
 			}
 		}
+		cache.put(it,  r);
 		return r;
+	}
+
+	public DateAnalysis analyzeDates() {
+		return analyzeDates(new HashMap<Item, DateAnalysis>(), current);
 	}
 	
 	/** A description of the current item and its parents. */
