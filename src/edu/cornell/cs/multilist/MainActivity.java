@@ -198,7 +198,7 @@ public class MainActivity extends Activity {
 		box.addView(setup_top_line());
 		setup_item_rows();
 		box.addView(grid);
-		if (!pos.current().isFulfilled())
+		if (pos.current().isRoot() || !pos.current().isFulfilled())
 			box.addView(setup_due_date());
 		box.addView(setup_notes());
 		if (pos.isCopying())
@@ -208,7 +208,7 @@ public class MainActivity extends Activity {
 			edit_text.requestFocus();
 			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 			imm.showSoftInput(edit_text, InputMethodManager.SHOW_IMPLICIT);
-//			edit_text.setShowSoftInputOnFocus(true);
+//			edit_text.setShowSoftInputOnFocus(true); // API 21...
 
 			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE); 
 			edit_text.requestFocus();
