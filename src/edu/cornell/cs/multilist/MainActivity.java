@@ -2,6 +2,7 @@ package edu.cornell.cs.multilist;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -25,6 +26,8 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Display;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -45,6 +48,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
+import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.Space;
 import android.widget.TextView;
@@ -77,13 +81,13 @@ public class MainActivity extends Activity {
 	TextView edit_text;
 	TextView notes;
 	Button clear_date;
-	
+
 	static final String APP_STATE_KEY = "state";
 	static final String PERSISTENT_STATE_KEY = "MultiList";
 	static final String ENCODING_CHARSET = "ISO-8859-1";
-	
+
 	static final int selectedColor = Color.argb(255, 155, 147, 100);
-	
+
 	int md5(byte[] b) {
 		MessageDigest md = null;
 		try {
@@ -96,25 +100,26 @@ public class MainActivity extends Activity {
 		}
 		return 0;
 	}
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		restoreState(savedInstanceState);
-		
+
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-		
+
 		outer = new ScrollView(this);
 		box = new LinearLayout(this);
 		box.setOrientation(LinearLayout.VERTICAL);
 		outer.addView(box);
-	
+
 		grid = new GridLayout(this);
 		setContentView(outer);
 		pos = new Position(model);
 
 		setup();
 	}
+
 	private void restoreState(Bundle savedInstanceState) {
 		if (savedInstanceState == null) {
 			SharedPreferences prefs = getPreferences(MODE_PRIVATE);
@@ -124,12 +129,11 @@ public class MainActivity extends Activity {
 				model = new Model(dummy);
 				int where = 0;
 				try {
-//					System.err.println("read string: " + val);
+					// System.err.println("read string: " + val);
 					byte[] bytes = ByteEncoder.decode(val);
-//					System.err.println(" -> " + bytes.length + " bytes");
-//					System.err.println("hash = " + md5(bytes));
-					ObjectInputStream os = new ObjectInputStream(
-							new ByteArrayInputStream(bytes));
+					// System.err.println(" -> " + bytes.length + " bytes");
+					// System.err.println("hash = " + md5(bytes));
+					ObjectInputStream os = new ObjectInputStream(new ByteArrayInputStream(bytes));
 					model = (Model) os.readObject();
 					os.close();
 				} catch (StreamCorruptedException e) {
@@ -143,8 +147,7 @@ public class MainActivity extends Activity {
 				Item root = new Item();
 				model = new Model(root);
 			}
-		} else
-		if (savedInstanceState.containsKey(APP_STATE_KEY)) {
+		} else if (savedInstanceState.containsKey(APP_STATE_KEY)) {
 			Serializable s = savedInstanceState.getSerializable(APP_STATE_KEY);
 			model = (Model) s;
 		} else {
@@ -153,34 +156,36 @@ public class MainActivity extends Activity {
 			model = new Model(root);
 		}
 	}
-	
+
 	@Override
 	protected void onSaveInstanceState(Bundle savedState) {
 		savedState.putSerializable(APP_STATE_KEY, model);
 	}
-	
-	@Override protected void onPause() {
+
+	@Override
+	protected void onPause() {
 		finishEditing();
 		super.onPause();
 	}
-	
-	@Override protected void onStop(){ 
+
+	@Override
+	protected void onStop() {
 		SharedPreferences.Editor edit = getPreferences(MODE_PRIVATE).edit();
-		
+
 		ByteArrayOutputStream bout = new ByteArrayOutputStream();
 		try {
 			ObjectOutputStream os = new ObjectOutputStream(bout);
 
 			os.writeObject(model);
 			os.close();
-			
+
 			byte[] bytes = bout.toByteArray();
-//			System.err.println("Generated " + bytes.length + " bytes");
-//			System.err.println("hash = " + md5(bytes));
-			
+			// System.err.println("Generated " + bytes.length + " bytes");
+			// System.err.println("hash = " + md5(bytes));
+
 			String enc = ByteEncoder.encode(bytes);
-//			System.err.println("  = " + enc.length() + " chars");
-//			System.err.println("output: " + enc);
+			// System.err.println(" = " + enc.length() + " chars");
+			// System.err.println("output: " + enc);
 			edit.putString(PERSISTENT_STATE_KEY, enc);
 			edit.commit();
 		} catch (IOException e) {
@@ -188,10 +193,10 @@ public class MainActivity extends Activity {
 		}
 		super.onStop();
 	}
-	
+
 	private void setup() {
 		box.removeAllViews();
-		
+
 		itemPanes = new HashMap<Item, ViewGroup>();
 		items = new HashMap<View, Item>();
 		vert_pos = new HashMap<Item, Integer>();
@@ -208,23 +213,23 @@ public class MainActivity extends Activity {
 			edit_text.requestFocus();
 			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 			imm.showSoftInput(edit_text, InputMethodManager.SHOW_IMPLICIT);
-//			edit_text.setShowSoftInputOnFocus(true); // API 21...
+			// edit_text.setShowSoftInputOnFocus(true); // API 21...
 
-			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE); 
+			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 			edit_text.requestFocus();
 		}
 	}
 
 	private View setup_copy_buffer() {
 		assert pos.isCopying();
-		
+
 		TextView s = new TextView(this);
 		s.setText("selected: ");
 		s.setTextColor(Color.WHITE);
 		TextView t = new TextView(this);
 		t.setText(pos.copybufferDesc());
 		t.setTextColor(Color.WHITE);
-		
+
 		LinearLayout row = new LinearLayout(this);
 		row.setBackgroundColor(selectedColor);
 		add(row, s, t);
@@ -245,20 +250,19 @@ public class MainActivity extends Activity {
 					@Override
 					public boolean onMenuItemClick(MenuItem item) {
 						String it = item.getTitle().toString();
-						return do_selection_op(it);					
+						return do_selection_op(it);
 					}
 				});
 			}
 		});
 		add(row, b);
-//		registerForContextMenu(row);
-	
-		
+		// registerForContextMenu(row);
+
 		t.setPadding(5, 5, 5, 5);
-		row.setPadding(0,  10,  0,  0);
+		row.setPadding(0, 10, 0, 0);
 		return row;
 	}
-	
+
 	private boolean do_selection_op(String it) {
 		if (it.equals("clear")) {
 			finishEditing();
@@ -285,13 +289,13 @@ public class MainActivity extends Activity {
 			return true;
 		} else if (it.equals("check")) {
 			finishEditing();
-			for (Item k: pos.copyBuffer())
+			for (Item k : pos.copyBuffer())
 				pos.setFulfilled(k, false, AndroidDateFactory.now());
 			setup();
 			return true;
 		} else if (it.equals("uncheck")) {
 			finishEditing();
-			for (Item k: pos.copyBuffer())
+			for (Item k : pos.copyBuffer())
 				pos.setFulfilled(k, true, AndroidDateFactory.now());
 			setup();
 			return true;
@@ -302,18 +306,14 @@ public class MainActivity extends Activity {
 	private View setup_notes() {
 		notes = new EditText(this);
 		notes.setText(pos.current().note());
-		notes.setInputType(
-				  InputType.TYPE_TEXT_FLAG_AUTO_CORRECT
-				| InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+		notes.setInputType(InputType.TYPE_TEXT_FLAG_AUTO_CORRECT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
 		notes.clearFocus();
 		return notes;
 	}
-	
+
 	private void set_due_date(TextView d) {
 		ItemDate id = pos.current().dueDate();
-		String ds = id == null ?
-				  "none"
-				: pos.dateString(id);
+		String ds = id == null ? "none" : pos.dateString(id);
 		d.setText("Due: " + ds);
 		if (id == null)
 			clear_date.setVisibility(View.INVISIBLE);
@@ -329,9 +329,9 @@ public class MainActivity extends Activity {
 		clear_date.setText("clear");
 		clear_date.setTextSize(12);
 
-//		LayoutParams params = new LayoutParams();
-//        params.setMargins(0, 0, 0, 20);
-//		clear_date.setLayoutParams(params);
+		// LayoutParams params = new LayoutParams();
+		// params.setMargins(0, 0, 0, 20);
+		// clear_date.setLayoutParams(params);
 		final TextView d = new TextView(this);
 		set_due_date(d);
 		Space sp = new Space(this);
@@ -344,21 +344,19 @@ public class MainActivity extends Activity {
 		}
 		final DatePickerDialog.OnDateSetListener date = new DatePickerDialog.OnDateSetListener() {
 			@Override
-			public void onDateSet(DatePicker view, int year, int monthOfYear,
-					int dayOfMonth) {
+			public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
 				cal.set(Calendar.YEAR, year);
 				cal.set(Calendar.MONTH, monthOfYear);
 				cal.set(Calendar.DAY_OF_MONTH, dayOfMonth);
 				pos.current().setDueDate(AndroidDateFactory.create(cal.getTimeInMillis()));
 				set_due_date(d);
 			}
-		};	
+		};
 		d.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				DatePickerDialog dia = new DatePickerDialog(MainActivity.this, date,
-	            		cal.get(Calendar.YEAR), cal.get(Calendar.MONTH),
-	                    cal.get(Calendar.DAY_OF_MONTH));
+				DatePickerDialog dia = new DatePickerDialog(MainActivity.this, date, cal.get(Calendar.YEAR),
+						cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
 				dia.getDatePicker().setSpinnersShown(false);
 				dia.getDatePicker().setCalendarViewShown(true);
 				dia.show();
@@ -367,8 +365,7 @@ public class MainActivity extends Activity {
 		if (pos.current().numKids() > 0) {
 			DateAnalysis r = pos.analyzeDates();
 			if (r.first_k != null) {
-				LinearLayout h2 = new LinearLayout(this),
-						h3 = new LinearLayout(this);
+				LinearLayout h2 = new LinearLayout(this), h3 = new LinearLayout(this);
 				TextView t2 = new TextView(this);
 				t2.setText("First due: " + r.first_k.name() + ", ");
 				TextView ds1 = new TextView(this);
@@ -383,7 +380,7 @@ public class MainActivity extends Activity {
 
 				if (pos.current().dueDate() != null && r.first_k != r.last_k) {
 					TextView t3 = new TextView(this);
-					t3.setText("Last due: "+ r.last_k.name() + ", ");
+					t3.setText("Last due: " + r.last_k.name() + ", ");
 					TextView ds3 = new TextView(this);
 					ds3.setText(r.last.toString());
 					add(h3, t3, ds3);
@@ -394,7 +391,8 @@ public class MainActivity extends Activity {
 			}
 		}
 		clear_date.setOnClickListener(new OnClickListener() {
-			@Override public void onClick(View v) {
+			@Override
+			public void onClick(View v) {
 				pos.current().setDueDate(null);
 				set_due_date(d);
 			}
@@ -408,7 +406,8 @@ public class MainActivity extends Activity {
 		int i = 0;
 
 		for (Item k : pos.items()) {
-			if (!current.showFulfilled && k.isFulfilled()) continue;
+			if (!current.showFulfilled && k.isFulfilled())
+				continue;
 			ViewGroup h = new LinearLayout(this);
 			itemPanes.put(k, h);
 			vert_pos.put(k, i);
@@ -442,7 +441,7 @@ public class MainActivity extends Activity {
 		pos.setNote(notes.getText().toString());
 		if (pos.isEditing()) {
 			pos.finishEditing(edit_text.getText().toString());
-			setup_row(pos.editItem(), edit_row);				
+			setup_row(pos.editItem(), edit_row);
 		}
 	}
 
@@ -461,11 +460,11 @@ public class MainActivity extends Activity {
 		ViewGroup checkbox_area = new LinearLayout(this);
 		checkbox_area.setMinimumWidth(180);
 		add(row, checkbox_area);
-		
+
 		if (pos.isCopying() && pos.copyBuffer().contains(k)) {
 			row.setBackgroundColor(selectedColor);
 		}
-		
+
 		if (edited) {
 			final TextView tf = new EditText(this);
 			tf.setLines(1);
@@ -473,9 +472,10 @@ public class MainActivity extends Activity {
 			tf.setInputType(InputType.TYPE_TEXT_FLAG_AUTO_CORRECT);
 			edit_text = tf;
 			add(checkbox_area, cb = new CheckBox(this), tf);
-			
+
 			tf.setOnKeyListener(new OnKeyListener() {
-				@Override public boolean onKey(View v, int keyCode, KeyEvent event) {
+				@Override
+				public boolean onKey(View v, int keyCode, KeyEvent event) {
 					if (keyCode == KeyEvent.KEYCODE_ENTER) {
 						pos.finishEditing(tf.getText().toString());
 						setup_row(k, i);
@@ -483,7 +483,6 @@ public class MainActivity extends Activity {
 					return false;
 				}
 			});
-
 
 		} else {
 			cb = new CheckBox(this);
@@ -499,27 +498,29 @@ public class MainActivity extends Activity {
 		down.setText("►");
 		add(buttons, down);
 		addHandlers(cb, down, k);
-		items.put(cb,  k);
+		items.put(cb, k);
 		items.put(checkbox_area, k);
-		items.put(row,  k);
+		items.put(row, k);
 
 		registerForContextMenu(checkbox_area);
 		registerForContextMenu(cb);
 		registerForContextMenu(row);
 	}
+
 	@Override
-	public
-	void onCreateContextMenu(ContextMenu c, View v, ContextMenuInfo inf) {
+	public void onCreateContextMenu(ContextMenu c, View v, ContextMenuInfo inf) {
 		Item k = items.get(v);
-		if (k == context_item) return; // avoid duplicating items
+		if (k == context_item)
+			return; // avoid duplicating items
 		c.add("edit");
 		c.add("select");
 		c.add("remove");
-	
+
 		context_item = k;
 	}
+
 	Item context_item;
-	
+
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
 		String op = item.getTitle().toString();
@@ -549,7 +550,7 @@ public class MainActivity extends Activity {
 			warn(w.getMessage());
 		}
 	}
-	
+
 	private void copyKid(Item k) {
 		finishEditing();
 		if (pos.copyBuffer().contains(k))
@@ -563,12 +564,11 @@ public class MainActivity extends Activity {
 	public void onContextMenuClosed(Menu m) {
 		context_item = null;
 	}
-	
+
 	private void warn(String message) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage(message)
-			   .setTitle("Warning");
-		
+		builder.setMessage(message).setTitle("Warning");
+
 		AlertDialog d = builder.create();
 		d.show();
 	}
@@ -628,14 +628,16 @@ public class MainActivity extends Activity {
 		}
 		return toprow;
 	}
-	
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		menu.add("new");
 		menu.add("hide/show completed");
 		menu.add("sort by name");
-		menu.add("sort by date");		
+		menu.add("sort by date");
 		menu.add("select all");
+		menu.add("import...");
+		menu.add("export...");
 		return true;
 	}
 
@@ -652,8 +654,81 @@ public class MainActivity extends Activity {
 			sort_by_date();
 		} else if (op.equals("select all")) {
 			select_all();
+		} else if (op.equals("import...")) {
+			import_items();
+		} else if (op.equals("export...")) {
+			export_items();
 		}
 		return super.onOptionsItemSelected(item);
+	}
+	
+	static class FilePopup {
+		EditText prompt;
+		PopupWindow popup;
+	}
+	
+	FilePopup createFilePopup(String message) {
+		LinearLayout content = new LinearLayout(this);
+		content.setBackgroundColor(Color.DKGRAY);
+		content.setOrientation(LinearLayout.VERTICAL);
+		TextView msg = new TextView(this);
+		msg.setText(message);
+		final EditText file_prompt = new EditText(this);
+		file_prompt.setMaxLines(1);
+		file_prompt.setInputType(InputType.TYPE_CLASS_TEXT);
+		content.addView(file_prompt);
+		content.addView(msg);
+		final PopupWindow pw = new PopupWindow(content);
+		pw.showAtLocation(outer, Gravity.TOP, 10, 10);
+		pw.setFocusable(true);
+		Display display = getWindowManager().getDefaultDisplay();
+		
+		int screenWidth = display.getWidth();
+		int screenHeight = display.getHeight();
+		pw.update(screenWidth-20, screenHeight/4);
+		
+		FilePopup ret = new FilePopup();
+		ret.prompt = file_prompt;
+		ret.popup = pw;
+		return ret;
+	}
+
+	private void export_items() {
+		final FilePopup popup = createFilePopup("Export item to file:");
+		
+		popup.prompt.setOnKeyListener(new OnKeyListener() {
+			@Override
+			public boolean onKey(View v, int keyCode, KeyEvent event) {
+				if (keyCode == KeyEvent.KEYCODE_ENTER) {			
+					IO.exportToFile(model, popup.prompt.getText().toString());
+					popup.popup.dismiss();
+					return true;
+				}
+				return false;
+			}			
+		});
+	}
+
+	private void import_items() {
+		final FilePopup popup = createFilePopup("Import from file:");
+		popup.prompt.setOnKeyListener(new OnKeyListener() {
+			@Override
+			public boolean onKey(View v, int keyCode, KeyEvent event) {
+				if (keyCode == KeyEvent.KEYCODE_ENTER) {	
+					Model new_model = IO.importFromFile(popup.prompt.getText().toString());
+					
+					System.out.println("read a model successfully?");
+					popup.popup.dismiss();
+					// Models should be merged.
+					
+					model = new_model;
+					pos = new Position(model);
+					setup();
+					return true;
+				}
+				return false;
+			}			
+		});
 	}
 
 	private void select_all() {
