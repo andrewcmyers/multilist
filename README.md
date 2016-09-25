@@ -1,5 +1,5 @@
 # multilist
-Multilist is a Java checklist/TODO application.  Multilist is designed to be be
+Multilist is checklist/TODO application for Android and JavaFX.  Multilist is designed to be be
 convenient for maintaining multiple checklists that are reused, such as
 shopping lists, recipes, and trip checklists. Importantly, these checklists are
 allowed to overlap. Multilist rolls together checklist items and lists as the
