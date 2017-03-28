@@ -421,15 +421,26 @@ public class MainActivity extends Activity {
 		b.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				newKid();
+				newKid(false);
 			}
 		});
 		grid.addView(b, gridCoord(i, 2));
+		
+		Button b1 = new Button(this);
+		b1.setText("+1");
+		b1.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				newKid(true);
+			}
+		});
+		grid.addView(b1, gridCoord(i, 0));	
 	}
 
-	protected void newKid() {
+	protected void newKid(boolean one_shot) {
 		finishEditing();
 		Item it = pos.createKid();
+		if (one_shot) it.setRemoveOnFulfill(true);
 		pos.setFulfilled(it, false, AndroidDateFactory.now());
 		itemPanes.put(it, new LinearLayout(MainActivity.this));
 		pos.startEditing(it);
@@ -496,6 +507,9 @@ public class MainActivity extends Activity {
 		grid.addView(buttons, gridCoord(i, 2));
 		down = new Button(this);
 		down.setText("►");
+		if (k.hasUnfulfilledKids()) {
+			down.setTextColor(Color.CYAN);
+		}
 		add(buttons, down);
 		addHandlers(cb, down, k);
 		items.put(cb, k);
@@ -645,7 +659,7 @@ public class MainActivity extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		String op = item.getTitle().toString();
 		if (op.equals("new")) {
-			newKid();
+			newKid(false);
 		} else if (op.equals("hide/show completed")) {
 			toggleShowCompleted();
 		} else if (op.equals("sort by name")) {

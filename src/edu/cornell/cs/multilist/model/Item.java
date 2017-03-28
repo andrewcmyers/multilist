@@ -9,6 +9,10 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class Item implements Iterable<Item>, Serializable {
+	/**
+	 * 
+	 */
+	//private static final long serialVersionUID = 8977719630296637624L;
 	private static final long serialVersionUID = -7216453968867906427L;
 	private String name;
 	private Set<Item> parents = newItems();
@@ -24,6 +28,7 @@ public class Item implements Iterable<Item>, Serializable {
 	private String note = "";
 	/** whether to show fulfilled kids. XXX In a multiuser system, this should be user-specific. */
 	public boolean showFulfilled = true;
+	//public boolean removeOnFulfill = false;
 	
 	/** Invariant:
 	    iff an item is in kids, then its parents include this.
@@ -107,6 +112,7 @@ public class Item implements Iterable<Item>, Serializable {
 		boolean result = kids.add(k);
 		if (result) kid_ordering.add(k);
 		k.parents.add(this);
+		unfulfilledKids_computed = false;
 		assert invariant();
 		return result;
 	}
@@ -120,6 +126,7 @@ public class Item implements Iterable<Item>, Serializable {
 
 		kid_ordering.remove(k);
 		k.parents.remove(this);
+		unfulfilledKids_computed = false;
 		assert invariant();
 		return result;
 	}
@@ -137,6 +144,10 @@ public class Item implements Iterable<Item>, Serializable {
 
 	public int numKids() {
 		return kids.size();
+	}
+	
+	public void setRemoveOnFulfill(boolean b) {
+		//removeOnFulfill = b;
 	}
 
 	public void setFulfilled(boolean f, ItemDate now) {
@@ -156,6 +167,7 @@ public class Item implements Iterable<Item>, Serializable {
 		}
 		fulfilled = f;
 		outer: for (Item p : parents) {
+			p.unfulfilledKids_computed = false;
 			for (Item k : p) {
 				if (!k.fulfilled) {
 					p.setFulfilled(false, now);
@@ -224,6 +236,22 @@ public class Item implements Iterable<Item>, Serializable {
 
 	public boolean isFulfilled() {
 		return fulfilled;
+	}
+	
+	transient boolean unfulfilledKids;
+	transient boolean unfulfilledKids_computed = false;
+
+	public boolean hasUnfulfilledKids() {
+		if (unfulfilledKids_computed) return unfulfilledKids;
+		unfulfilledKids_computed = true;
+		unfulfilledKids = false;
+		for (Item k : kids) {
+			if (!k.fulfilled || k.hasUnfulfilledKids()) {
+				unfulfilledKids = true;
+				break;
+			}
+		}
+		return unfulfilledKids;
 	}
 }
 
