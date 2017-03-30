@@ -40,6 +40,8 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.GridLayout;
@@ -52,11 +54,13 @@ import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.Space;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 import edu.cornell.cs.multilist.model.AndroidDateFactory;
 import edu.cornell.cs.multilist.model.Item;
 import edu.cornell.cs.multilist.model.Item.Warning;
 import edu.cornell.cs.multilist.model.Position.DateAnalysis;
 import edu.cornell.cs.multilist.model.ItemDate;
+import edu.cornell.cs.multilist.model.MLObjectInputStream;
 import edu.cornell.cs.multilist.model.Model;
 import edu.cornell.cs.multilist.model.Position;
 import edu.cornell.cs.multilist.model.SortOrder;
@@ -81,6 +85,7 @@ public class MainActivity extends Activity {
 	TextView edit_text;
 	TextView notes;
 	Button clear_date;
+	PopupWindow popup; // null if no popup
 
 	static final String APP_STATE_KEY = "state";
 	static final String PERSISTENT_STATE_KEY = "MultiList";
@@ -133,7 +138,7 @@ public class MainActivity extends Activity {
 					byte[] bytes = ByteEncoder.decode(val);
 					// System.err.println(" -> " + bytes.length + " bytes");
 					// System.err.println("hash = " + md5(bytes));
-					ObjectInputStream os = new ObjectInputStream(new ByteArrayInputStream(bytes));
+					ObjectInputStream os = new MLObjectInputStream(new ByteArrayInputStream(bytes));
 					model = (Model) os.readObject();
 					os.close();
 				} catch (StreamCorruptedException e) {
@@ -203,7 +208,8 @@ public class MainActivity extends Activity {
 		box.addView(setup_top_line());
 		setup_item_rows();
 		box.addView(grid);
-		if (pos.current().isRoot() || !pos.current().isFulfilled())
+
+		if (pos.current().isRoot() || !pos.current().isComplete())
 			box.addView(setup_due_date());
 		box.addView(setup_notes());
 		if (pos.isCopying())
@@ -290,13 +296,13 @@ public class MainActivity extends Activity {
 		} else if (it.equals("check")) {
 			finishEditing();
 			for (Item k : pos.copyBuffer())
-				pos.setFulfilled(k, false, AndroidDateFactory.now());
+				pos.setCompleted(k, false, AndroidDateFactory.now());
 			setup();
 			return true;
 		} else if (it.equals("uncheck")) {
 			finishEditing();
 			for (Item k : pos.copyBuffer())
-				pos.setFulfilled(k, true, AndroidDateFactory.now());
+				pos.setCompleted(k, true, AndroidDateFactory.now());
 			setup();
 			return true;
 		}
@@ -406,7 +412,7 @@ public class MainActivity extends Activity {
 		int i = 0;
 
 		for (Item k : pos.items()) {
-			if (!current.showFulfilled && k.isFulfilled())
+			if (!current.showComplete() && k.isComplete())
 				continue;
 			ViewGroup h = new LinearLayout(this);
 			itemPanes.put(k, h);
@@ -415,17 +421,6 @@ public class MainActivity extends Activity {
 			setup_row(k, i);
 			i++;
 		}
-		Button b = new Button(this);
-		b.setText("+");
-
-		b.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				newKid(false);
-			}
-		});
-		grid.addView(b, gridCoord(i, 2));
-		
 		Button b1 = new Button(this);
 		b1.setText("+1");
 		b1.setOnClickListener(new OnClickListener() {
@@ -434,14 +429,24 @@ public class MainActivity extends Activity {
 				newKid(true);
 			}
 		});
-		grid.addView(b1, gridCoord(i, 0));	
+		Button b = new Button(this);
+		b.setText("+∞");
+		b.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				newKid(false);
+			}
+		});
+		LinearLayout hb = new LinearLayout(this);
+		add(hb, b1, b);
+		grid.addView(hb, gridCoord(i, 0));	
 	}
 
 	protected void newKid(boolean one_shot) {
 		finishEditing();
 		Item it = pos.createKid();
 		if (one_shot) it.setRemoveOnFulfill(true);
-		pos.setFulfilled(it, false, AndroidDateFactory.now());
+		pos.setCompleted(it, false, AndroidDateFactory.now());
 		itemPanes.put(it, new LinearLayout(MainActivity.this));
 		pos.startEditing(it);
 		edit_row = pos.current().numKids() - 1;
@@ -500,14 +505,14 @@ public class MainActivity extends Activity {
 			cb.setText(k.name());
 			add(checkbox_area, cb);
 		}
-		cb.setChecked(!k.isFulfilled());
+		cb.setChecked(!k.isComplete());
 
 		ViewGroup buttons = new LinearLayout(this);
 
 		grid.addView(buttons, gridCoord(i, 2));
 		down = new Button(this);
 		down.setText("►");
-		if (k.hasUnfulfilledKids()) {
+		if (k.hasIncompleteKids()) {
 			down.setTextColor(Color.CYAN);
 		}
 		add(buttons, down);
@@ -593,8 +598,12 @@ public class MainActivity extends Activity {
 		cb.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				k.setFulfilled(!cb.isChecked(), AndroidDateFactory.now());
-				if (!pos.showCompleted()) {
+				if (k.hasIncompleteKids()) {
+					navigateDownTo(k);
+					return;					
+				}
+				boolean removed = pos.setCompleted(k, !cb.isChecked(), AndroidDateFactory.now());
+				if (removed || !pos.showCompleted()) {
 					finishEditing();
 					setup();
 				}
@@ -603,11 +612,15 @@ public class MainActivity extends Activity {
 		down.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				finishEditing();
-				pos.moveDownTo(k);
-				setup();
+				navigateDownTo(k);
 			}
 		});
+	}
+	
+	void navigateDownTo(Item k) {
+		finishEditing();
+		pos.moveDownTo(k);
+		setup();
 	}
 
 	LayoutParams gridCoord(int r, int c) {
@@ -620,27 +633,53 @@ public class MainActivity extends Activity {
 	private View setup_top_line() {
 		final Item current = pos.current();
 		LinearLayout toprow = new LinearLayout(this);
+		TextView name = new TextView(this);
 		if (!pos.current().isRoot()) {
 			Button up = new Button(this);
 			up.setText("▲");
-			TextView name = new TextView(this);
 			name.setText(pos.topline(current));
-			name.setPadding(5, 5, 5, 5);
-			name.setTextSize(20);
-			name.setTextColor(Color.WHITE);
-			if (pos.copyBuffer().contains(current))
-				name.setBackgroundColor(selectedColor);
-			add(toprow, up, name);
+			add(toprow, up);
 			up.setOnClickListener(new OnClickListener() {
 				@Override
 				public void onClick(View v) {
-					finishEditing();
-					pos.moveUp();
-					setup();
+					navigateUp();
 				}
 			});
 		}
+	
+		name.setPadding(5, 5, 5, 5);
+		name.setTextSize(18);
+		name.setTextColor(Color.WHITE);
+		LinearLayout.LayoutParams expander = new LinearLayout.LayoutParams(1, LinearLayout.LayoutParams.MATCH_PARENT);
+		expander.weight = 1.0f;
+		name.setLayoutParams(expander);
+		add(toprow, name);
+
+		if (pos.copyBuffer().contains(current))
+			name.setBackgroundColor(selectedColor);
+		
+		ToggleButton tb = new ToggleButton(this);
+		add(toprow, tb);
+		tb.setLayoutParams(new LinearLayout.LayoutParams(300, LinearLayout.LayoutParams.MATCH_PARENT));
+		tb.setTextOn("all");
+		tb.setTextOff("all");
+		tb.setChecked(current.showComplete());
+		tb.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				finishEditing();
+				current.setShowComplete(isChecked);
+				setup();
+			}
+		});
+
 		return toprow;
+	}
+	
+	void navigateUp() {
+		finishEditing();
+		pos.moveUp();
+		setup();
 	}
 
 	@Override
@@ -653,6 +692,15 @@ public class MainActivity extends Activity {
 		menu.add("import...");
 		menu.add("export...");
 		return true;
+	}
+	
+	public void onBackPressed() {
+		if (popup != null) {
+			popup.dismiss();
+			popup = null;
+		} else {
+			super.onBackPressed();
+		}
 	}
 
 	@Override
@@ -694,12 +742,14 @@ public class MainActivity extends Activity {
 		content.addView(msg);
 		final PopupWindow pw = new PopupWindow(content);
 		pw.showAtLocation(outer, Gravity.TOP, 10, 10);
+		pw.setOutsideTouchable(true);
 		pw.setFocusable(true);
 		Display display = getWindowManager().getDefaultDisplay();
 		
 		int screenWidth = display.getWidth();
 		int screenHeight = display.getHeight();
 		pw.update(screenWidth-20, screenHeight/4);
+		popup = pw;
 		
 		FilePopup ret = new FilePopup();
 		ret.prompt = file_prompt;
@@ -708,14 +758,16 @@ public class MainActivity extends Activity {
 	}
 
 	private void export_items() {
-		final FilePopup popup = createFilePopup("Export item to file:");
+		final FilePopup fpop = createFilePopup("Export item to file:");
 		
-		popup.prompt.setOnKeyListener(new OnKeyListener() {
+		fpop.prompt.setOnKeyListener(new OnKeyListener() {
 			@Override
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
 				if (keyCode == KeyEvent.KEYCODE_ENTER) {			
-					IO.exportToFile(model, popup.prompt.getText().toString());
-					popup.popup.dismiss();
+//					IO.exportToFile(model.root, popup.prompt.getText().toString());
+					IO.exportToFile(pos.current(), fpop.prompt.getText().toString());
+
+					fpop.popup.dismiss();
 					return true;
 				}
 				return false;
@@ -724,19 +776,21 @@ public class MainActivity extends Activity {
 	}
 
 	private void import_items() {
-		final FilePopup popup = createFilePopup("Import from file:");
-		popup.prompt.setOnKeyListener(new OnKeyListener() {
+		final FilePopup fpop = createFilePopup("Import from file:");
+		fpop.prompt.setOnKeyListener(new OnKeyListener() {
 			@Override
 			public boolean onKey(View v, int keyCode, KeyEvent event) {
 				if (keyCode == KeyEvent.KEYCODE_ENTER) {	
-					Model new_model = IO.importFromFile(popup.prompt.getText().toString());
-					
-					System.out.println("read a model successfully?");
-					popup.popup.dismiss();
-					// Models should be merged.
-					
-					model = new_model;
-					pos = new Position(model);
+					Object read_obj = IO.importFromFile(fpop.prompt.getText().toString());
+					fpop.popup.dismiss();
+					if (read_obj instanceof Model) {
+						System.out.println("read a model successfully?");
+						// Models should be merged.
+						model = (Model) read_obj;
+						pos = new Position(model);
+					} else if (read_obj instanceof Item) {
+						pos.current().addKid((Item) read_obj);
+					}
 					setup();
 					return true;
 				}

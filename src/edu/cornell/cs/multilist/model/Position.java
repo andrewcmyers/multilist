@@ -51,6 +51,19 @@ public class Position extends Observable {
 		path.remove(path.size() - 1);
 		assert invariant();
 	}
+	
+	/** Retreat up the current path until we reach an item that is actually
+	 * reachable from the root. This is needed in case we complete a one-shot
+	 * item that is the current item (which can cascade).
+	 */
+	private void moveUpUntilOk() {
+		while (path.size() > 0) {
+			Item parent = path.get(path.size() - 1);
+			if (parent.hasKid(current)) return;
+			current = parent;
+			path.remove(path.size() - 1);
+		}
+	}
 
 	public void moveDownTo(Item k) {
 		assert invariant();
@@ -108,7 +121,7 @@ public class Position extends Observable {
 		return false;
 	}
 	public boolean showCompleted() {
-		return current.showFulfilled;
+		return current.showComplete();
 	}
 	public void toggleShowCompleted() {
 		current.showFulfilled = !current.showFulfilled;	
@@ -117,7 +130,7 @@ public class Position extends Observable {
 		return (editing && k == edit_item);
 	}
 	public void finishEditing(String value) {
-		assert isEditing();
+		assert editing;
 		Item it = edit_item;
 		setName(it, value);
 		editing = false;
@@ -176,11 +189,11 @@ public class Position extends Observable {
 					r.first = a.first_k.dueDate();
 					r.first_k = a.first_k;
 				}
-				if (k.dueDate() != null && !k.isFulfilled() && (r.first == null || k.dueDate().isBefore(r.first))) {
+				if (k.dueDate() != null && !k.isComplete() && (r.first == null || k.dueDate().isBefore(r.first))) {
 					r.first = k.dueDate();
 					r.first_k = k;
 				}
-				if (k.dueDate() != null && !k.isFulfilled() && (r.last == null || k.dueDate().isAfter(r.last))) {
+				if (k.dueDate() != null && !k.isComplete() && (r.last == null || k.dueDate().isAfter(r.last))) {
 					r.last = k.dueDate();
 					r.last_k = k;
 				}
@@ -232,10 +245,15 @@ public class Position extends Observable {
 		current.setNote(text);
 		notifyChanged();
 	}
-	public void setFulfilled(Item it, boolean b, ItemDate now) {
-		it.setFulfilled(b, now);
-		notifyChanged();		
+	public boolean setCompleted(Item it, boolean b, ItemDate now) {
+		boolean r = it.setCompleted(b, now);
+		if (r) {
+			moveUpUntilOk();
+		}
+		notifyChanged();
+		return r;
 	}
+
 	private void addKid(Item k) {
 		current.addKid(k);
 		notifyChanged();		

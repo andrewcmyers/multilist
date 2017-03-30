@@ -9,10 +9,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class Item implements Iterable<Item>, Serializable {
-	/**
-	 * 
-	 */
-	//private static final long serialVersionUID = 8977719630296637624L;
+
 	private static final long serialVersionUID = -7216453968867906427L;
 	private String name;
 	private Set<Item> parents = newItems();
@@ -24,27 +21,28 @@ public class Item implements Iterable<Item>, Serializable {
 	private ArrayList<Item> kid_ordering = new ArrayList<Item>(); 
 	private ItemDate due_date; // may be null if no due date
 	int quantity = 1;
-	private boolean fulfilled = true;
+	private boolean fulfilled = true; // fulfilled = complete
 	private String note = "";
 	/** whether to show fulfilled kids. XXX In a multiuser system, this should be user-specific. */
-	public boolean showFulfilled = true;
-	//public boolean removeOnFulfill = false;
+	boolean showFulfilled = true;
+	public boolean removeOnFulfill = false;
 	
 	/** Invariant:
 	    iff an item is in kids, then its parents include this.
 	    iff an item is in parents, its kids include this.
 	 */
 	public boolean invariant() {
-		assert quantity >= 1;
-		for (Item p : parents)
-			assert (p.hasKid(this));
-		assert (kids.size() == kid_ordering.size());
+		if (quantity < 1) return false;
+		for (Item p : parents) {
+			if (!p.hasKid(this)) return false;
+		}
+		if (kids.size() != kid_ordering.size()) return false;
 		for (Item k : kids) {
-			assert (k.hasParent(this));
-			assert(kid_ordering.contains(k));
+			if (!k.hasParent(this)) return false;
+			if (!kid_ordering.contains(k)) return false;
 		}
 		for (Item k : kid_ordering) {
-			assert (kids.contains(k));
+			if (!kids.contains(k)) return false;
 		}
 		
 		return true;
@@ -146,13 +144,22 @@ public class Item implements Iterable<Item>, Serializable {
 		return kids.size();
 	}
 	
+	public boolean removeWhenComplete() {
+		return removeOnFulfill;
+//		return false;
+	}
 	public void setRemoveOnFulfill(boolean b) {
-		//removeOnFulfill = b;
+		removeOnFulfill = b;
 	}
 
-	public void setFulfilled(boolean f, ItemDate now) {
-		if (isRoot()) return;
-		if (fulfilled == f) return;
+	/** Set the completed state of this item to `f`.
+	 *  @return whether any items (possibly including this)
+	 *  were removed as a result.
+	 */
+	public boolean setCompleted(boolean f, ItemDate now) {
+		if (isRoot()) return false;
+		if (fulfilled == f) return false;
+		boolean ret = false;
 		if (!f && due_date != null && due_date.isBefore(now)) {
 			due_date = now;
 			boolean bumped = false;
@@ -166,16 +173,26 @@ public class Item implements Iterable<Item>, Serializable {
 			if (!bumped) due_date = now.plusDays(1);
 		}
 		fulfilled = f;
-		outer: for (Item p : parents) {
+		Set<Item> par = parents;
+		outer: for (Item p : par) {
 			p.unfulfilledKids_computed = false;
+			if (removeWhenComplete() && fulfilled) {
+				try {
+					ret = true;
+					p.removeKid(this);
+				} catch (Warning e) {
+					// silently stop removals that break the rules
+				}
+			}
 			for (Item k : p) {
 				if (!k.fulfilled) {
-					p.setFulfilled(false, now);
+					ret |= p.setCompleted(false, now);
 					continue outer;
 				}
 			}
-			p.setFulfilled(true, now);
+			ret |= p.setCompleted(true, now);
 		}
+		return ret;
 	}
 	
 	public ItemDate dueDate() {
@@ -234,24 +251,30 @@ public class Item implements Iterable<Item>, Serializable {
 		due_date = d;
 	}
 
-	public boolean isFulfilled() {
+	public boolean isComplete() {
 		return fulfilled;
 	}
 	
 	transient boolean unfulfilledKids;
 	transient boolean unfulfilledKids_computed = false;
 
-	public boolean hasUnfulfilledKids() {
+	public boolean hasIncompleteKids() {
 		if (unfulfilledKids_computed) return unfulfilledKids;
 		unfulfilledKids_computed = true;
 		unfulfilledKids = false;
 		for (Item k : kids) {
-			if (!k.fulfilled || k.hasUnfulfilledKids()) {
+			if (!k.fulfilled || k.hasIncompleteKids()) {
 				unfulfilledKids = true;
 				break;
 			}
 		}
 		return unfulfilledKids;
+	}
+	public boolean showComplete() {
+		return showFulfilled;
+	}
+	public void setShowComplete(boolean c) {
+		showFulfilled = c;
 	}
 }
 
