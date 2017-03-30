@@ -660,7 +660,7 @@ public class MainActivity extends Activity {
 		
 		ToggleButton tb = new ToggleButton(this);
 		add(toprow, tb);
-		tb.setLayoutParams(new LinearLayout.LayoutParams(300, LinearLayout.LayoutParams.MATCH_PARENT));
+		tb.setLayoutParams(new LinearLayout.LayoutParams(250, LinearLayout.LayoutParams.MATCH_PARENT));
 		tb.setTextOn("all");
 		tb.setTextOff("all");
 		tb.setChecked(current.showComplete());
