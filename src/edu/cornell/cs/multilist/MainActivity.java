@@ -74,9 +74,11 @@ public class MainActivity extends Activity {
 	int edit_row; // which row of the grid is being edited.
 	boolean unsaved_update;
 
-	ScrollView outer;
-	LinearLayout box;
+	LinearLayout outer;
+	ScrollView scroller;
+	//LinearLayout box;
 	GridLayout grid;
+	LinearLayout top_line, box, bottom_line;
 	Map<Item, ViewGroup> itemPanes;
 	Map<View, Item> items;
 	Map<Item, Integer> vert_pos;
@@ -91,7 +93,9 @@ public class MainActivity extends Activity {
 	static final String PERSISTENT_STATE_KEY = "MultiList";
 	static final String ENCODING_CHARSET = "ISO-8859-1";
 
-	static final int selectedColor = Color.argb(255, 155, 147, 100);
+	static final int selectedColor = Color.argb(255, 155, 147, 100),
+			scrollerColor = Color.argb(255, 32, 32, 40),
+			ikArrowColor = Color.argb(255, 32, 200, 255);
 
 	int md5(byte[] b) {
 		MessageDigest md = null;
@@ -112,17 +116,37 @@ public class MainActivity extends Activity {
 		restoreState(savedInstanceState);
 
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-
-		outer = new ScrollView(this);
+		
+		// outer : LL (V)
+		//   top_line : LL (H)
+		//   scroller : scrollview
+		//   box: LL (V)
+		//     grid: gridview
+		//     notes: edittext
+		//   bottom_line : LL (H)
+		
+		outer = new LinearLayout(this);
+		outer.setOrientation(LinearLayout.VERTICAL);
+		LinearLayout.LayoutParams outer_params = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+		outer.setLayoutParams(outer_params);
+		scroller = new ScrollView(this);
+		LinearLayout.LayoutParams scroller_params = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+		scroller_params.weight = 1.0f;
+		scroller.setLayoutParams(scroller_params);
+		scroller.setBackgroundColor(scrollerColor);
+		
+		top_line = new LinearLayout(this);
+		bottom_line = new LinearLayout(this);
+		add(outer,  top_line, scroller, bottom_line);
+		
 		box = new LinearLayout(this);
 		box.setOrientation(LinearLayout.VERTICAL);
-		outer.addView(box);
-
-		grid = new GridLayout(this);
-		setContentView(outer);
+		add(scroller,  box);
+		
 		pos = new Position(model);
 
 		setup();
+		setContentView(outer);
 	}
 
 	private void restoreState(Bundle savedInstanceState) {
@@ -200,20 +224,24 @@ public class MainActivity extends Activity {
 	}
 
 	private void setup() {
+
+		System.err.println("setting up bottom");
 		box.removeAllViews();
 
 		itemPanes = new HashMap<Item, ViewGroup>();
 		items = new HashMap<View, Item>();
 		vert_pos = new HashMap<Item, Integer>();
-		box.addView(setup_top_line());
+		
+		setup_top_line();
 		setup_item_rows();
 		box.addView(grid);
-
+	
 		if (pos.current().isRoot() || !pos.current().isComplete())
 			box.addView(setup_due_date());
 		box.addView(setup_notes());
-		if (pos.isCopying())
-			box.addView(setup_copy_buffer());
+		
+		setup_bottom_line();
+
 		/* bring up soft keyboard -- why doesn't this work? */
 		if (pos.isEditing()) {
 			edit_text.requestFocus();
@@ -224,6 +252,29 @@ public class MainActivity extends Activity {
 			getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
 			edit_text.requestFocus();
 		}
+	}
+
+	private void setup_bottom_line() {
+		bottom_line.removeAllViews();
+		Button b1 = new Button(this);
+		b1.setText("+1");
+		b1.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				newKid(true);
+			}
+		});
+		Button b = new Button(this);
+		b.setText("+∞");
+		b.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				newKid(false);
+			}
+		});
+		add(bottom_line, b1, b);
+		if (pos.isCopying())
+			bottom_line.addView(setup_copy_buffer());
 	}
 
 	private View setup_copy_buffer() {
@@ -408,6 +459,7 @@ public class MainActivity extends Activity {
 		return result;
 	}
 
+	/** Initialize grid to contain a view of all the checked items */
 	private void setup_item_rows() {
 		grid = new GridLayout(this);
 		final Item current = pos.current();
@@ -423,25 +475,7 @@ public class MainActivity extends Activity {
 			setup_row(k, i);
 			i++;
 		}
-		Button b1 = new Button(this);
-		b1.setText("+1");
-		b1.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				newKid(true);
-			}
-		});
-		Button b = new Button(this);
-		b.setText("+∞");
-		b.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				newKid(false);
-			}
-		});
-		LinearLayout hb = new LinearLayout(this);
-		add(hb, b1, b);
-		grid.addView(hb, gridCoord(i, 0));	
+	
 	}
 
 	protected void newKid(boolean one_shot) {
@@ -516,7 +550,7 @@ public class MainActivity extends Activity {
 		down = new Button(this);
 		down.setText("►");
 		if (k.hasIncompleteKids()) {
-			down.setTextColor(Color.CYAN);
+			down.setTextColor(ikArrowColor);
 		}
 		add(buttons, down);
 		addHandlers(cb, down, k);
@@ -635,7 +669,8 @@ public class MainActivity extends Activity {
 
 	private View setup_top_line() {
 		final Item current = pos.current();
-		LinearLayout toprow = new LinearLayout(this);
+		LinearLayout toprow = top_line;
+		top_line.removeAllViews();
 		TextView name = new TextView(this);
 		if (!pos.current().isRoot()) {
 			Button up = new Button(this);
