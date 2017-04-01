@@ -312,8 +312,10 @@ public class MainActivity extends Activity {
 	private View setup_notes() {
 		notes = new EditText(this);
 		notes.setText(pos.current().note());
-		notes.setInputType(InputType.TYPE_TEXT_FLAG_AUTO_CORRECT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+		//notes.setInputType(InputType.TYPE_TEXT_FLAG_AUTO_CORRECT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+		// XXX somehow calling setInputType turns OFF multiline input
 		notes.clearFocus();
+		//notes.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)); // not needed
 		return notes;
 	}
 
@@ -486,6 +488,7 @@ public class MainActivity extends Activity {
 			tf.setLines(1);
 			tf.setText(k.name());
 			tf.setInputType(InputType.TYPE_TEXT_FLAG_AUTO_CORRECT);
+			
 			edit_text = tf;
 			add(checkbox_area, cb = new CheckBox(this), tf);
 
