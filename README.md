@@ -9,6 +9,8 @@ impose a tree structure on items; instead, multiple items can depend on the
 same item, as long as dependencies do not form a cycle. This is
 handy when the same item can appear in multiple checklists.
 
+Available on the Google Play Store at https://play.google.com/store/apps/details?id=edu.cornell.cs.multilist
+
 A longer term goal is to make it use Fabric
 (http://www.cs.cornell.edu/projects/Fabric) as the back end for persistent
 storage. Using Fabric will allow checklists to be shared securely among
