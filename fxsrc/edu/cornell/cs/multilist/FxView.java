@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.Set;
 
 import edu.cornell.cs.multilist.model.FXDateFactory;
 import edu.cornell.cs.multilist.model.Item;

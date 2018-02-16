@@ -1,69 +1,36 @@
 package edu.cornell.cs.multilist;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.io.StreamCorruptedException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
-import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
-import android.view.ContextMenu;
+import android.view.*;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.Display;
-import android.view.Gravity;
-import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnKeyListener;
-import android.view.ViewGroup;
-import android.view.ViewGroup.MarginLayoutParams;
-import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
+import android.widget.*;
 import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.DatePicker;
-import android.widget.EditText;
-import android.widget.GridLayout;
 import android.widget.GridLayout.LayoutParams;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.PopupMenu.OnMenuItemClickListener;
-import android.widget.PopupWindow;
-import android.widget.ScrollView;
-import android.widget.Space;
-import android.widget.TextView;
-import android.widget.ToggleButton;
-import edu.cornell.cs.multilist.model.AndroidDateFactory;
-import edu.cornell.cs.multilist.model.Item;
+import edu.cornell.cs.multilist.model.*;
 import edu.cornell.cs.multilist.model.Item.Warning;
 import edu.cornell.cs.multilist.model.Position.DateAnalysis;
-import edu.cornell.cs.multilist.model.ItemDate;
-import edu.cornell.cs.multilist.model.MLObjectInputStream;
-import edu.cornell.cs.multilist.model.Model;
-import edu.cornell.cs.multilist.model.Position;
-import edu.cornell.cs.multilist.model.SortOrder;
+
+import java.io.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends Activity {
 
@@ -223,12 +190,13 @@ public class MainActivity extends Activity {
 		super.onStop();
 	}
 
+    /** Set up all the views for the current model and position.
+     */
 	private void setup() {
 
-		System.err.println("setting up bottom");
 		box.removeAllViews();
 
-		itemPanes = new HashMap<Item, ViewGroup>();
+		itemPanes = new HashMap<>();
 		items = new HashMap<View, Item>();
 		vert_pos = new HashMap<Item, Integer>();
 		
@@ -716,11 +684,34 @@ public class MainActivity extends Activity {
 	
 	void navigateUp() {
 		finishEditing();
+		Item cur = pos.current();
 		pos.moveUp();
 		setup();
+        scrollTo(cur);
 	}
+    private void scrollTo(Item cur) {
+	    final ViewGroup v = itemPanes.get(cur);
+        if (v != null) {
+            scroller.post(new Runnable() {
+                @Override
+                public void run() {
+                    scroller.scrollTo(0, v.getTop());
+                }
+            });
+        }
+    }
 
-	@Override
+    void beep() {
+        try {
+            Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
+            r.play();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		menu.add("new");
 		menu.add("hide/show completed");
